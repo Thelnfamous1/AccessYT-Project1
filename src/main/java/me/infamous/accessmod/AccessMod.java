@@ -1,6 +1,7 @@
 package me.infamous.accessmod;
 
 import me.infamous.accessmod.common.registry.AccessModDataSerializers;
+import me.infamous.accessmod.common.registry.AccessModEffects;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import me.infamous.accessmod.common.registry.AccessModItems;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -19,5 +20,6 @@ public class AccessMod {
         AccessModEntityTypes.register(modEventBus);
         AccessModItems.register(modEventBus);
         AccessModDataSerializers.register(modEventBus);
+        AccessModEffects.register(modEventBus);
     }
 }

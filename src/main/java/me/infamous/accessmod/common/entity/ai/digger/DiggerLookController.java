@@ -1,6 +1,5 @@
-package me.infamous.accessmod.common.entity.ai;
+package me.infamous.accessmod.common.entity.ai.digger;
 
-import me.infamous.accessmod.common.entity.Digger;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.ai.controller.LookController;
 

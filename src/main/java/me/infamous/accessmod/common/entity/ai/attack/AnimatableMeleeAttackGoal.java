@@ -1,6 +1,6 @@
-package me.infamous.accessmod.common.entity.ai;
+package me.infamous.accessmod.common.entity.ai.attack;
 
-import me.infamous.accessmod.common.entity.AnimatableMeleeAttack;
+import me.infamous.accessmod.common.entity.ai.attack.AnimatableMeleeAttack;
 import net.minecraft.entity.CreatureEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;

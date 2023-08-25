@@ -1,4 +1,5 @@
 {
   "entity.accessmod.dune": "Dune",
-  "item.accessmod.dune_spawn_egg": "Dune Spawn Egg"
+  "item.accessmod.dune_spawn_egg": "Dune Spawn Egg",
+  "mob_effect.accessmod.dune_wrath": "Dune's Wrath"
 }

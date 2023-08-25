@@ -2,7 +2,7 @@ package me.infamous.accessmod.client.renderer;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
-import me.infamous.accessmod.common.entity.Dune;
+import me.infamous.accessmod.common.entity.dune.Dune;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererManager;

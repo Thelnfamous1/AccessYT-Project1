@@ -1,7 +1,7 @@
 package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
-import me.infamous.accessmod.common.entity.Digger;
+import me.infamous.accessmod.common.entity.ai.digger.Digger;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.datasync.IDataSerializer;
 import net.minecraftforge.eventbus.api.IEventBus;

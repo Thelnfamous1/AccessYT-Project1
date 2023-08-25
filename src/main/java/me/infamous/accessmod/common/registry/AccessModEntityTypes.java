@@ -1,7 +1,7 @@
 package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
-import me.infamous.accessmod.common.entity.Dune;
+import me.infamous.accessmod.common.entity.dune.Dune;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.EntityType;

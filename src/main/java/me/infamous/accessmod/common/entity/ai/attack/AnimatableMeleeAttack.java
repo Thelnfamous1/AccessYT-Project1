@@ -1,4 +1,4 @@
-package me.infamous.accessmod.common.entity;
+package me.infamous.accessmod.common.entity.ai.attack;
 
 public interface AnimatableMeleeAttack {
     byte START_ATTACK_EVENT = 4;

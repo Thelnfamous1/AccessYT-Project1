@@ -1,4 +1,4 @@
-package me.infamous.accessmod.common.entity;
+package me.infamous.accessmod.common.entity.ai.digger;
 
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.SoundEvent;

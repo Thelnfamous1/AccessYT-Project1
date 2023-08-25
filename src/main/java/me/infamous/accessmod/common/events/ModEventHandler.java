@@ -1,7 +1,7 @@
 package me.infamous.accessmod.common.events;
 
 import me.infamous.accessmod.AccessMod;
-import me.infamous.accessmod.common.entity.Dune;
+import me.infamous.accessmod.common.entity.dune.Dune;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import net.minecraft.entity.EntitySpawnPlacementRegistry;
 import net.minecraft.world.gen.Heightmap;

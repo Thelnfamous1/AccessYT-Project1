@@ -1,6 +1,7 @@
 package me.infamous.accessmod.datagen;
 
 import me.infamous.accessmod.AccessMod;
+import me.infamous.accessmod.common.registry.AccessModEffects;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import me.infamous.accessmod.common.registry.AccessModItems;
 import net.minecraft.data.DataGenerator;
@@ -15,6 +16,7 @@ public class AccessModLanguageProvider extends LanguageProvider {
     protected void addTranslations() {
         this.addEntityType(AccessModEntityTypes.DUNE, "Dune");
         this.add(AccessModItems.DUNE_SPAWN_EGG.get(), "Dune Spawn Egg");
+        this.add(AccessModEffects.DUNE_WRATH.get(), "Dune's Wrath'");
         /*
         this.addEntityType(AccessYTEntityTypes.MAGIC_CARPET, "Magic Carpet");
         this.add(AccessYTItems.MAGIC_CARPET.get(), "Magic Carpet");

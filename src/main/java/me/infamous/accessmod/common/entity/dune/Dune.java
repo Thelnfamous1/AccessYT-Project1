@@ -1,7 +1,13 @@
-package me.infamous.accessmod.common.entity;
+package me.infamous.accessmod.common.entity.dune;
 
+import me.infamous.accessmod.common.entity.ai.attack.AnimatableMeleeAttack;
 import me.infamous.accessmod.common.entity.ai.*;
+import me.infamous.accessmod.common.entity.ai.attack.AnimatableMeleeAttackGoal;
+import me.infamous.accessmod.common.entity.ai.digger.*;
+import me.infamous.accessmod.common.entity.ai.magic.AnimatableMagic;
+import me.infamous.accessmod.common.entity.ai.magic.UsingMagicGoal;
 import me.infamous.accessmod.common.registry.AccessModDataSerializers;
+import me.infamous.accessmod.common.registry.AccessModEffects;
 import me.infamous.accessmod.datagen.AccessModTags;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
@@ -18,9 +24,12 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.particles.BlockParticleData;
 import net.minecraft.particles.ParticleTypes;
+import net.minecraft.potion.EffectInstance;
+import net.minecraft.potion.Effects;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
@@ -46,7 +55,7 @@ import software.bernie.geckolib3.util.GeckoLibUtil;
 import javax.annotation.Nullable;
 import java.util.Random;
 
-public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeAttack, IEntityAdditionalSpawnData, Digger {
+public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeAttack, IEntityAdditionalSpawnData, Digger, AnimatableMagic<Dune.DuneMagicType> {
     public static final int ATTACK_ANIMATION_LENGTH = 18;
     public static final int ATTACK_ANIMATION_ACTION_POINT = 16;
     public static final int DIG_ANIMATION_LENGTH = 38;
@@ -54,13 +63,17 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     protected static final AnimationBuilder IDLE_ANIM = new AnimationBuilder().addAnimation("idle", true);
     protected static final AnimationBuilder WALK_ANIM = new AnimationBuilder().addAnimation("walk", true);
     protected static final AnimationBuilder DRAG_ANIM = new AnimationBuilder().addAnimation("dragging", false);
-    protected static final AnimationBuilder RANGED_ANIM = new AnimationBuilder().addAnimation("attack_distance", false);
+    protected static final AnimationBuilder WRATH_ANIM = new AnimationBuilder().addAnimation("attack_distance", false);
     protected static final AnimationBuilder SPAWN_ANIM = new AnimationBuilder().addAnimation("spawn", false);
     protected static final AnimationBuilder MELEE_ANIM = new AnimationBuilder().addAnimation("attack", false);
     protected static final AnimationBuilder BURIED_ANIM = new AnimationBuilder().addAnimation("buried", ILoopType.EDefaultLoopTypes.HOLD_ON_LAST_FRAME);
 
     private static final DataParameter<Digger.DigState> DATA_DIG_STATE = EntityDataManager.defineId(Dune.class, AccessModDataSerializers.getSerializer(AccessModDataSerializers.DIG_STATE));
+    private static final DataParameter<Byte> DATA_MAGIC_TYPE_ID = EntityDataManager.defineId(Dune.class, DataSerializers.BYTE);
+
     private int attackAnimationTick;
+    private int magicUseTicks;
+    private DuneMagicType currentMagicType;
 
     public Dune(EntityType<? extends Dune> entityType, World world) {
         super(entityType, world);
@@ -91,11 +104,10 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
         this.goalSelector.addGoal(0, new EmergingGoal<>(this, DIG_ANIMATION_LENGTH));
         this.goalSelector.addGoal(0, new DiggingGoal<>(this, DIG_ANIMATION_LENGTH));
         this.goalSelector.addGoal(1, new BuriedGoal<>(this));
-        this.goalSelector.addGoal(2, new RestrictSunGoal(this));
-        //this.goalSelector.addGoal(3, new FleeSunGoal(this, 1.0D));
+        this.goalSelector.addGoal(2, new UsingMagicGoal<>(this));
+        this.goalSelector.addGoal(3, new DuneWrathGoal(this));
         this.goalSelector.addGoal(4, new AnimatableMeleeAttackGoal<>(this, 1.0D, false));
         this.goalSelector.addGoal(5, new AttackTurtleEggGoal(this, 1.0D, 3));
-        //this.goalSelector.addGoal(6, new MoveThroughVillageGoal(this, 1.0D, true, 4, this::canBreakDoors));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
     }
 
@@ -115,6 +127,7 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DATA_DIG_STATE, DigState.SURFACED);
+        this.entityData.define(DATA_MAGIC_TYPE_ID, (byte)0);
     }
 
     @Override
@@ -122,6 +135,8 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
         super.onSyncedDataUpdated(pKey);
         if (DATA_DIG_STATE.equals(pKey)) {
             this.refreshDimensions();
+        } else if(DATA_MAGIC_TYPE_ID.equals(pKey)){
+            this.startMagicAnimation(this.getCurrentMagicType());
         }
     }
 
@@ -173,6 +188,9 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
         if(this.attackAnimationTick > 0){
             this.attackAnimationTick--;
         }
+        if(this.magicUseTicks > 0){
+            this.magicUseTicks--;
+        }
     }
 
     @Override
@@ -183,13 +201,6 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     @Override
     protected void customServerAiStep() {
         super.customServerAiStep();
-        /*
-        if (this.isNotSurfaced()) {
-            this.setTarget(null);
-            this.getNavigation().stop();
-            this.getMoveControl().setWantedPosition(this.getX(), this.getY(), this.getZ(), 0.0D);
-        }
-         */
     }
 
     @Override
@@ -257,6 +268,17 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
         return NetworkHooks.getEntitySpawningPacket(this);
     }
 
+    @Override
+    public boolean doHurtTarget(Entity pEntity) {
+        boolean hurtTarget = super.doHurtTarget(pEntity);
+        if (hurtTarget && this.getMainHandItem().isEmpty() && pEntity instanceof LivingEntity) {
+            float effectiveDifficulty = this.level.getCurrentDifficultyAt(this.blockPosition()).getEffectiveDifficulty();
+            ((LivingEntity)pEntity).addEffect(new EffectInstance(AccessModEffects.DUNE_WRATH.get(), 140 * (int)effectiveDifficulty));
+        }
+
+        return hurtTarget;
+    }
+
     /***
      * Methods for {@link IAnimatable}
      */
@@ -281,6 +303,15 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
         // We are surfaced, so check surfaced animations
         else if(this.isAttackAnimationInProgress()){
             event.getController().setAnimation(MELEE_ANIM);
+        } else if(this.isMagicAnimationInProgress()){
+            switch (this.getCurrentMagicType()){
+                case WRATH:
+                    event.getController().setAnimation(WRATH_ANIM);
+                case DRAG:
+                    event.getController().setAnimation(DRAG_ANIM);
+                default:
+                    return PlayState.STOP;
+            }
         } else if(event.isMoving()){
             event.getController().setAnimation(WALK_ANIM);
         } else{
@@ -391,4 +422,95 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
         return this.getTarget() != null;
     }
 
+    /**
+     * {@link AnimatableMagic} methods
+     */
+
+    @Override
+    public int getMagicAnimationTick() {
+        return this.magicUseTicks;
+    }
+
+    @Override
+    public void setMagicAnimationTick(int magicAnimationTick) {
+        this.magicUseTicks = magicAnimationTick;
+    }
+
+    @Override
+    public SoundEvent getUseMagicSound() {
+        return SoundEvents.EVOKER_CAST_SPELL;
+    }
+
+    @Override
+    public DuneMagicType getCurrentMagicType() {
+        return !this.level.isClientSide ? this.currentMagicType : DuneMagicType.byId(this.entityData.get(DATA_MAGIC_TYPE_ID));
+    }
+
+    @Override
+    public void setCurrentMagicType(DuneMagicType magicType) {
+        this.currentMagicType = magicType;
+        this.entityData.set(DATA_MAGIC_TYPE_ID, (byte)magicType.getId());
+    }
+
+    @Override
+    public DuneMagicType getDefaultMagicType() {
+        return DuneMagicType.NONE;
+    }
+
+    public enum DuneMagicType implements MagicType{
+        NONE(0, 0, 0, 0, null),
+        WRATH(1, 15, 21, 20, SoundEvents.ILLUSIONER_PREPARE_BLINDNESS),
+        DRAG(2, 15, 28, 20, SoundEvents.EVOKER_PREPARE_ATTACK);
+
+        private final int id;
+        private final int warmupTime;
+        private final int castingTime;
+        private final int cooldownTime;
+        @Nullable
+        private final SoundEvent prepareSound;
+
+        DuneMagicType(int id, int warmupTime, int castingTime, int cooldownTime, SoundEvent prepareSound) {
+            this.id = id;
+            this.warmupTime = warmupTime;
+            this.castingTime = castingTime;
+            this.cooldownTime = cooldownTime;
+            this.prepareSound = prepareSound;
+        }
+
+        public static DuneMagicType byId(int pId) {
+            for(DuneMagicType magicType : values()) {
+                if (pId == magicType.id) {
+                    return magicType;
+                }
+            }
+
+            return NONE;
+        }
+
+        @Override
+        public int getId() {
+            return this.id;
+        }
+
+        @Override
+        public int getWarmupTime() {
+            return this.warmupTime;
+        }
+
+        @Override
+        public int getCastingTime() {
+            return this.castingTime;
+        }
+
+        @Override
+        public int getCooldownTime() {
+            return this.cooldownTime;
+        }
+
+        @Nullable
+        @Override
+        public SoundEvent getPrepareSound() {
+            return this.prepareSound;
+        }
+    }
 }

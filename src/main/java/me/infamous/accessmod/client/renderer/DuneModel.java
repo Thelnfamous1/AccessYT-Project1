@@ -1,7 +1,7 @@
 package me.infamous.accessmod.client.renderer;
 
 import me.infamous.accessmod.AccessMod;
-import me.infamous.accessmod.common.entity.Dune;
+import me.infamous.accessmod.common.entity.dune.Dune;
 import net.minecraft.util.ResourceLocation;
 import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
 import software.bernie.geckolib3.core.processor.IBone;
