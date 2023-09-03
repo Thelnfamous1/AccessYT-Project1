@@ -16,5 +16,6 @@ public class AccessModBlockTagsProvider extends BlockTagsProvider {
     @Override
     protected void addTags() {
         this.tag(AccessModTags.DUNES_SPAWN_ON).addTag(BlockTags.SAND);
+        this.tag(AccessModTags.DUNE_WRATH_SINK_IN).addTag(BlockTags.SAND);
     }
 }

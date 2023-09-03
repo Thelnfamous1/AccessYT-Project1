@@ -2,6 +2,7 @@ package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.common.entity.dune.Dune;
+import me.infamous.accessmod.common.entity.dune.WrathfulDust;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.EntityType;
@@ -18,6 +19,12 @@ public class AccessModEntityTypes {
             EntityType.Builder.of(Dune::new, EntityClassification.MONSTER)
                     .sized(0.75F, 2.25F)
                     .clientTrackingRange(8));
+
+    public static final RegistryObject<EntityType<WrathfulDust>> WRATHFUL_DUST = register("wrathful_dust",
+            EntityType.Builder.<WrathfulDust>of(WrathfulDust::new, EntityClassification.MISC)
+                    .sized(0.25F, 0.25F)
+                    .clientTrackingRange(4)
+                    .updateInterval(10));
 
 
     private static <T extends Entity> RegistryObject<EntityType<T>> register(String pKey, EntityType.Builder<T> pBuilder) {

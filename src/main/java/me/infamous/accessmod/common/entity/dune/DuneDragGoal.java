@@ -6,9 +6,9 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.util.Util;
 import net.minecraft.util.text.StringTextComponent;
 
-public class DuneWrathGoal extends AnimatableMagicGoal<Dune, Dune.DuneMagicType> {
-    public DuneWrathGoal(Dune mage) {
-        super(mage, Dune.DuneMagicType.WRATH);
+public class DuneDragGoal extends AnimatableMagicGoal<Dune, DuneMagicType> {
+    public DuneDragGoal(Dune mage) {
+        super(mage, DuneMagicType.DRAG);
     }
 
     @Override

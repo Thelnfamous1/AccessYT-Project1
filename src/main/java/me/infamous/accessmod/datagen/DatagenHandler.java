@@ -19,12 +19,14 @@ public class DatagenHandler {
         AccessModLanguageProvider languageProvider = new AccessModLanguageProvider(generator);
         AccessModItemModelProvider itemModelProvider = new AccessModItemModelProvider(generator, existingFileHelper);
         AccessModBlockTagsProvider blockTagsProvider = new AccessModBlockTagsProvider(generator, existingFileHelper);
+        AccessModEntityTypeTagsProvider entityTypeTagsProvider = new AccessModEntityTypeTagsProvider(generator, existingFileHelper);
         if(includeClient){
             generator.addProvider(languageProvider);
             generator.addProvider(itemModelProvider);
         }
         if(includeServer){
             generator.addProvider(blockTagsProvider);
+            generator.addProvider(entityTypeTagsProvider);
         }
     }
 }

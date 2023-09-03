@@ -7,7 +7,6 @@ import net.minecraft.util.SoundEvent;
 
 public abstract class AnimatableMagicGoal<T extends MobEntity & AnimatableMagic<M>, M extends AnimatableMagic.MagicType> extends Goal {
     private int attackWarmupDelay;
-    private int nextAttackTickCount;
     protected final T mage;
     private final M magicType;
 
@@ -23,7 +22,7 @@ public abstract class AnimatableMagicGoal<T extends MobEntity & AnimatableMagic<
             if (this.mage.isMagicAnimationInProgress()) {
                 return false;
             } else {
-                return this.mage.tickCount >= this.nextAttackTickCount;
+                return !this.mage.getMagicCooldowns().isOnCooldown(this.magicType);
             }
         } else {
             return false;
@@ -34,7 +33,6 @@ public abstract class AnimatableMagicGoal<T extends MobEntity & AnimatableMagic<
     public void start() {
         this.attackWarmupDelay = this.magicType.getWarmupTime();
         this.mage.startMagicAnimation(this.magicType);
-        this.nextAttackTickCount = this.mage.tickCount + this.magicType.getCooldownTime();
         SoundEvent prepareSound = this.magicType.getPrepareSound();
         if (prepareSound != null) {
             this.mage.playSound(prepareSound, 1.0F, 1.0F);
@@ -48,6 +46,7 @@ public abstract class AnimatableMagicGoal<T extends MobEntity & AnimatableMagic<
         --this.attackWarmupDelay;
         if (this.attackWarmupDelay == 0) {
             this.useMagic();
+            this.mage.getMagicCooldowns().addCooldown(this.magicType);
             this.mage.playSound(this.mage.getUseMagicSound(), 1.0F, 1.0F);
         }
     }

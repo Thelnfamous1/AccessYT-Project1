@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "me.infamous.accessmod.mixin",
+  "plugin": "me.infamous.accessmod.mixin.AccessModMixinPlugin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "${mod_id}.refmap.json",
+  "mixins": [
+    "AbstractBlockStateMixin",
+    "EntityMixin",
+    "LivingEntityMixin"
+  ],
+  "client": [],
+  "minVersion": "0.8"
+}

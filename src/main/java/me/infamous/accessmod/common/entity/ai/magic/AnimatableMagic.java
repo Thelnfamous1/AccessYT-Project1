@@ -30,6 +30,8 @@ public interface AnimatableMagic<M extends AnimatableMagic.MagicType> {
         this.setCurrentMagicType(this.getDefaultMagicType());
     }
 
+    MagicCooldownTracker getMagicCooldowns();
+
     interface MagicType{
 
         int getId();
