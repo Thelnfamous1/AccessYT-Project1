@@ -2,11 +2,13 @@ package me.infamous.accessmod.common.entity.dune;
 
 import me.infamous.accessmod.common.entity.ai.magic.AnimatableMagicGoal;
 import me.infamous.accessmod.common.registry.AccessModEffects;
+import me.infamous.accessmod.duck.DuneSinker;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.Util;
-import net.minecraft.util.text.StringTextComponent;
 
 public class DuneDragGoal extends AnimatableMagicGoal<Dune, DuneMagicType> {
+
+    public static final int SINK_TIMER = 200;
+
     public DuneDragGoal(Dune mage) {
         super(mage, DuneMagicType.DRAG);
     }
@@ -24,6 +26,6 @@ public class DuneDragGoal extends AnimatableMagicGoal<Dune, DuneMagicType> {
     @Override
     protected void useMagic() {
         LivingEntity target = this.mage.getTarget();
-        target.sendMessage(new StringTextComponent("You are being dragged into the ground!"), Util.NIL_UUID);
+        DuneSinker.sink(target, SINK_TIMER);
     }
 }

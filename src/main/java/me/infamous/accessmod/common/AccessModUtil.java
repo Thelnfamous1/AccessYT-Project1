@@ -2,7 +2,6 @@ package me.infamous.accessmod.common;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.util.DamageSource;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Quaternion;
@@ -13,7 +12,6 @@ public class AccessModUtil {
     private static final int BASE_INACCURACY = 14;
     private static final float BASE_VELOCITY = 1.6F;
     private static final int DIFFICULTY_FACTOR = 4;
-    public static final DamageSource SUFFOCATION = new DamageSource("suffocation").bypassArmor();
 
     public void shootLikeBow(LivingEntity shooter, LivingEntity target, ProjectileEntity projectile, SoundEvent shootSound) {
         double xDist = target.getX() - shooter.getX();
