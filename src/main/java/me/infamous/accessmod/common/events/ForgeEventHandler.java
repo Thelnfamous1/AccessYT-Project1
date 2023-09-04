@@ -20,4 +20,5 @@ public class ForgeEventHandler {
                     .add(new MobSpawnInfo.Spawners(AccessModEntityTypes.DUNE.get(), 19, 1, 1));
         }
     }
+
 }

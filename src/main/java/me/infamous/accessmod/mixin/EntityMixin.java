@@ -1,7 +1,6 @@
 package me.infamous.accessmod.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.datagen.AccessModTags;
 import me.infamous.accessmod.duck.DuneSinker;
 import net.minecraft.block.BlockState;
@@ -40,7 +39,6 @@ public abstract class EntityMixin implements DuneSinker {
     @Override
     public void setSinkTimer(int sinkTimer) {
         this.sinkTimer = sinkTimer;
-        AccessMod.LOGGER.info("Set sink timer for {} to {}", this, sinkTimer);
     }
 
     @Unique

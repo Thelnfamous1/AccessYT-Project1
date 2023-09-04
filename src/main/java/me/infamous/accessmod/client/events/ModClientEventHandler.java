@@ -2,6 +2,7 @@ package me.infamous.accessmod.client.events;
 
 import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.client.renderer.DuneRenderer;
+import ovh.corrail.flyingthings.render.RenderMagicCarpet;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.SpriteRenderer;
@@ -19,5 +20,7 @@ public class ModClientEventHandler {
         RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.DUNE.get(), DuneRenderer::new);
         RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.WRATHFUL_DUST.get(),
                 manager -> new SpriteRenderer<>(manager, Minecraft.getInstance().getItemRenderer()));
+
+        RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.MAGIC_CARPET.get(), RenderMagicCarpet::new);
     }
 }

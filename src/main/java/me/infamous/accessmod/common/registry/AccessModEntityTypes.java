@@ -1,6 +1,7 @@
 package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
+import ovh.corrail.flyingthings.carpet.EntityMagicCarpet;
 import me.infamous.accessmod.common.entity.dune.Dune;
 import me.infamous.accessmod.common.entity.dune.WrathfulDust;
 import net.minecraft.entity.Entity;
@@ -25,6 +26,15 @@ public class AccessModEntityTypes {
                     .sized(0.25F, 0.25F)
                     .clientTrackingRange(4)
                     .updateInterval(10));
+
+    public static final RegistryObject<EntityType<EntityMagicCarpet>> MAGIC_CARPET = register("magic_carpet",
+            EntityType.Builder.<EntityMagicCarpet>of(EntityMagicCarpet::new, EntityClassification.MISC)
+                    .setTrackingRange(80)
+                    .setUpdateInterval(1)
+                    .setShouldReceiveVelocityUpdates(true)
+                    .sized(1.5f, 0.3f)
+                    .setCustomClientFactory(EntityMagicCarpet::new)
+                    .noSummon());
 
 
     private static <T extends Entity> RegistryObject<EntityType<T>> register(String pKey, EntityType.Builder<T> pBuilder) {
