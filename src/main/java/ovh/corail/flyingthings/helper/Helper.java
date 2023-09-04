@@ -678,6 +678,7 @@ Public License instead of this License.  But first, please read
 package ovh.corail.flyingthings.helper;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.util.text.ITextComponent;
 import ovh.corail.flyingthings.config.ConfigFlyingThings;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import net.minecraft.client.Minecraft;
@@ -755,8 +756,8 @@ public class Helper {
     }
 
     @OnlyIn(Dist.CLIENT)
-    public static String getNameForKeybindSneak() {
-        return Minecraft.getInstance().options.keyShift.getName();
+    public static ITextComponent getNameForKeybindSneak() {
+        return Minecraft.getInstance().options.keyShift.getTranslatedKeyMessage();
     }
 
     @OnlyIn(Dist.CLIENT)

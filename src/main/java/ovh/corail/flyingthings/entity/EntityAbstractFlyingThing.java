@@ -853,7 +853,7 @@ public abstract class EntityAbstractFlyingThing extends Entity {
         if (player.isCrouching()) {
             ItemHandlerHelper.giveItemToPlayer(player, getStack());
             remove();
-            return ActionResultType.PASS;
+            return ActionResultType.CONSUME;
         } else {
             assert player.level.getServer() != null;
             if (player.level.getServer().isFlightAllowed()) {
@@ -1120,6 +1120,12 @@ public abstract class EntityAbstractFlyingThing extends Entity {
         } else if (entity.getBoundingBox().minY <= getBoundingBox().minY) {
             super.push(entity);
         }
+    }
+
+    // Added to fix the client not detecting when the mouse is over this entity
+    @Override
+    public boolean isPickable() {
+        return this.isAlive();
     }
 
     @Override
