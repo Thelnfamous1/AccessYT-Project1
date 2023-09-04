@@ -687,7 +687,7 @@ import net.minecraft.client.renderer.tileentity.ItemStackTileEntityRenderer;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import ovh.corail.flyingthings.carpet.EntityMagicCarpet;
+import ovh.corail.flyingthings.entity.EntityMagicCarpet;
 import ovh.corail.flyingthings.item.ItemMagicCarpet;
 
 @OnlyIn(Dist.CLIENT)

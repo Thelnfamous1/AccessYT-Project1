@@ -679,7 +679,7 @@ package ovh.corail.flyingthings.item;
 
 import ovh.corail.flyingthings.helper.NBTStackHelper;
 import ovh.corail.flyingthings.config.ConfigFlyingThings;
-import ovh.corail.flyingthings.carpet.EntityAbstractFlyingThing;
+import ovh.corail.flyingthings.entity.EntityAbstractFlyingThing;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;

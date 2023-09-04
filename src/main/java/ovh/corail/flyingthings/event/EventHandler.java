@@ -689,7 +689,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.items.ItemHandlerHelper;
 import ovh.corail.flyingthings.helper.Helper;
-import ovh.corail.flyingthings.carpet.EntityAbstractFlyingThing;
+import ovh.corail.flyingthings.entity.EntityAbstractFlyingThing;
 import ovh.corail.flyingthings.config.ConfigFlyingThings;
 
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE, modid = AccessMod.MODID)

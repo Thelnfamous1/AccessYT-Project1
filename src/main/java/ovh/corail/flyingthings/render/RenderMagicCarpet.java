@@ -682,7 +682,7 @@ import com.mojang.blaze3d.vertex.IVertexBuilder;
 import ovh.corail.flyingthings.helper.Functions;
 import ovh.corail.flyingthings.helper.TextureLocation;
 import ovh.corail.flyingthings.config.ConfigFlyingThings;
-import ovh.corail.flyingthings.carpet.EntityMagicCarpet;
+import ovh.corail.flyingthings.entity.EntityMagicCarpet;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.culling.ClippingHelper;
 import net.minecraft.client.renderer.entity.EntityRenderer;

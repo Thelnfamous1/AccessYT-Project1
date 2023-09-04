@@ -681,7 +681,7 @@ import me.infamous.accessmod.AccessMod;
 import ovh.corail.flyingthings.helper.Helper;
 import ovh.corail.flyingthings.render.TEISRMagicCarpet;
 import ovh.corail.flyingthings.config.ConfigFlyingThings;
-import ovh.corail.flyingthings.carpet.EntityAbstractFlyingThing;
+import ovh.corail.flyingthings.entity.EntityAbstractFlyingThing;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;

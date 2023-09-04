@@ -675,7 +675,7 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-package ovh.corail.flyingthings.carpet;
+package ovh.corail.flyingthings.entity;
 
 import me.infamous.accessmod.AccessMod;
 import ovh.corail.flyingthings.helper.Helper;

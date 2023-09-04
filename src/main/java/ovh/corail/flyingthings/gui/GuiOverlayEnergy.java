@@ -679,7 +679,7 @@ package ovh.corail.flyingthings.gui;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
-import ovh.corail.flyingthings.carpet.EntityAbstractFlyingThing;
+import ovh.corail.flyingthings.entity.EntityAbstractFlyingThing;
 import ovh.corail.flyingthings.config.ConfigFlyingThings;
 import ovh.corail.flyingthings.helper.Helper;
 import ovh.corail.flyingthings.helper.TextureLocation;
