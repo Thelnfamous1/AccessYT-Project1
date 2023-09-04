@@ -1,7 +1,7 @@
 package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
-import ovh.corrail.flyingthings.carpet.EntityMagicCarpet;
+import ovh.corail.flyingthings.carpet.EntityMagicCarpet;
 import me.infamous.accessmod.common.entity.dune.Dune;
 import me.infamous.accessmod.common.entity.dune.WrathfulDust;
 import net.minecraft.entity.Entity;

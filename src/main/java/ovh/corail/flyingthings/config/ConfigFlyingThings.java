@@ -675,167 +675,265 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-package ovh.corrail.flyingthings.helper;
+package ovh.corail.flyingthings.config;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import ovh.corrail.flyingthings.config.ConfigFlyingThings;
-import me.infamous.accessmod.common.registry.AccessModEntityTypes;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.entity.player.ClientPlayerEntity;
-import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.potion.Effect;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.registry.DynamicRegistries;
-import net.minecraft.world.DimensionType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.LogicalSide;
-import net.minecraftforge.fml.LogicalSidedProvider;
-import net.minecraftforge.fml.network.NetworkEvent;
-import org.lwjgl.opengl.GL11;
+import com.google.common.collect.Lists;
+import me.infamous.accessmod.AccessMod;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec.ConfigValue;
+import org.apache.commons.lang3.tuple.Pair;
 
-import javax.annotation.Nullable;
-import java.time.LocalDate;
-import java.time.temporal.ChronoField;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
 
-public class Helper {
-    @Nullable
-    private static Boolean isHalloween = null;
+@SuppressWarnings({ "unused", "WeakerAccess" })
+public class ConfigFlyingThings {
 
-    public static final Random random = new Random();
+    public static class General {
+        public final ConfigValue<Integer> timeToLoseEnergy;
+        public final ConfigValue<Integer> timeToRecoverEnergy;
+        public final ConfigValue<Boolean> allowToFlyInWater;
+        public final ConfigValue<Boolean> allowToBreakPlant;
+        public final ConfigValue<Boolean> allowSpecialRegen;
+        public final ConfigValue<Integer> chanceToFallWithProjectile;
+        public final ConfigValue<Boolean> persistantHolidays;
+        public final ConfigValue<Integer> chanceDropPhialOfAnimationInChest;
+        public final ConfigValue<Integer> chanceDropPhialOfAnimationOnBoss;
+        public final ConfigValue<Integer> chanceDropPumpkinStick;
+        public final ConfigValue<List<String>> treasureLootTable;
 
-    public static int getRandom(int min, int max) {
-        return random.nextInt(max - min + 1) + min;
-    }
+        public General(ForgeConfigSpec.Builder builder) {
+            builder.comment("Theses options can only be modified on the server in multiplayer").push("general");
 
-    public static boolean isValidPlayer(@Nullable Entity entity) {
-        return entity instanceof PlayerEntity;
-    }
+            timeToLoseEnergy = builder
+                    .comment("Time to lose an energy point [5..MAX|default:5]")
+                    .translation(getTranslation("time_to_lose_energy"))
+                    .defineInRange("time_to_lose_energy", 5, 5, Integer.MAX_VALUE);
+            timeToRecoverEnergy = builder
+                    .comment("Time to recover an energy point [5..MAX|default:5]")
+                    .translation(getTranslation("time_to_recover_energy"))
+                    .defineInRange("timeToRecoverEnergy", 5, 5, Integer.MAX_VALUE);
+            allowToFlyInWater = builder
+                    .comment("Allow flying in water [false/true|default:true]")
+                    .translation(getTranslation("allow_to_fly_in_water"))
+                    .define("allow_to_fly_in_water", true);
+            allowToBreakPlant = builder
+                    .comment("Allow breaking plants [false/true|default:true]")
+                    .translation(getTranslation("allow_to_break_plant"))
+                    .define("allow_to_break_plant", true);
+            allowSpecialRegen = builder
+                    .comment("Allow special regeneration [false/true|default:true]")
+                    .translation(getTranslation("allow_special_regen"))
+                    .define("allow_special_regen", true);
+            chanceToFallWithProjectile = builder
+                    .comment("Chance to fall with projectiles [0..100|default:10]")
+                    .translation(getTranslation("chance_to_fall_with_projectile"))
+                    .defineInRange("chance_to_fall_with_projectile", 10, 0, 100);
+            persistantHolidays = builder
+                    .comment("Allow special holiday events outside periods [false/true|default:true]")
+                    .translation(getTranslation("persistant_holidays"))
+                    .define("persistant_holidays", true);
+            chanceDropPumpkinStick = builder
+                    .comment("Chance to get Halloween Sticks during this event [0..1000|default:10]")
+                    .translation(getTranslation("chance_drop_pumpkin_stick"))
+                    .defineInRange("chance_drop_pumpkin_stick", 10, 0, 1000);
+            chanceDropPhialOfAnimationInChest = builder
+                    .comment("Chance to get a Phial of Animation in chest [0..1000|default:50]")
+                    .translation(getTranslation("chance_drop_phial_of_animation_in_chest"))
+                    .defineInRange("chance_drop_phial_of_animation_in_chest", 50, 0, 1000);
+            chanceDropPhialOfAnimationOnBoss = builder
+                    .comment("Chance to get a Phial of Animation on boss [0..1000|default:200]")
+                    .translation(getTranslation("chance_drop_phial_of_animation_on_boss"))
+                    .defineInRange("chance_drop_phial_of_animation_on_boss", 200, 0, 1000);
+            treasureLootTable = builder
+                    .comment("Defines the loottables having a chance to contain a Phial of Animation")
+                    .translation(getTranslation("treasure_loot_table"))
+                    .define("treasure_loot_table", Lists.newArrayList("minecraft:chests/end_city_treasure", "minecraft:chests/abandoned_mineshaft", "minecraft:chests/nether_bridge", "minecraft:chests/stronghold_library", "minecraft:chests/desert_pyramid", "minecraft:chests/jungle_temple", "minecraft:chests/igloo_chest", "minecraft:chests/woodland_mansion"));
 
-    public static boolean isValidPlayerMP(@Nullable Entity entity) {
-        return isValidPlayer(entity) && !entity.level.isClientSide;
-    }
-
-    public static boolean isFlyingthing(@Nullable Entity entity) {
-        return entity != null && (/*entity.getType() == AccessModEntityTypes.ENCHANTED_BROOM.get() ||*/ entity.getType() == AccessModEntityTypes.MAGIC_CARPET.get());
-    }
-
-    public static boolean isBoss(@Nullable Entity entity) {
-        return entity != null && !entity.canChangeDimensions();
-    }
-
-    public static boolean isRidingFlyingThing(@Nullable Entity entity) {
-        return entity != null && isFlyingthing(entity.getVehicle());
-    }
-
-    public static boolean isControllingFlyingThing(@Nullable Entity entity) {
-        return isRidingFlyingThing(entity) && entity.getVehicle().getControllingPassenger() == entity;
-    }
-
-    public static String getDimensionString(DimensionType dimensionType) {
-        ResourceLocation rl = DynamicRegistries.builtin().dimensionTypes().getKey(dimensionType);
-        return rl == null ? "" : rl.toString();
-    }
-
-    public static boolean isDateAroundHalloween() {
-        if (ConfigFlyingThings.general.persistantHolidays.get()) {
-            return true;
-        }
-        if (isHalloween == null) {
-            LocalDate date = LocalDate.now();
-            isHalloween = date.get(ChronoField.MONTH_OF_YEAR) + 1 == 10 && date.get(ChronoField.DAY_OF_MONTH) >= 20 || date.get(ChronoField.MONTH_OF_YEAR) + 1 == 11 && date.get(ChronoField.DAY_OF_MONTH) <= 3;
-        }
-        return isHalloween;
-    }
-
-    @OnlyIn(Dist.CLIENT)
-    public static String getNameForKeybindSneak() {
-        return Minecraft.getInstance().options.keyShift.getName();
-    }
-
-    @OnlyIn(Dist.CLIENT)
-    public static void removeClientPotionEffect(Effect effect) {
-        ClientPlayerEntity player = Minecraft.getInstance().player;
-        if (player != null) {
-            player.removeEffect(effect);
+            builder.pop();
         }
     }
 
-    @Nullable
-    public static MinecraftServer getServer() {
-        try {
-            MinecraftServer server = LogicalSidedProvider.INSTANCE.get(LogicalSide.SERVER);
-            if (server != null && Thread.currentThread() == server.getRunningThread()) {
-                return server;
+    public static class Client {
+        public final ConfigValue<Boolean> renderEffect;
+        public final ConfigValue<Boolean> barValue;
+        public final ConfigValue<Integer> barHeightPos;
+        public final ConfigValue<Integer> barColorSpeed;
+        public final ConfigValue<Integer> barColorEnergy;
+        public final ConfigValue<Graduation> barGraduationEnergy;
+        public final ConfigValue<Graduation> barGraduationSpeed;
+        public enum Graduation { SMALLEST, SMALLER, NORMAL, LARGEST }
+
+        public Client(ForgeConfigSpec.Builder builder) {
+            builder.comment("Theses options are custom parameters for the player").push("client");
+            renderEffect = builder
+                    .comment("Enable rendering effects [false/true|default:true]")
+                    .translation(getTranslation("render_effect"))
+                    .define("render_effect", true);
+            barValue = builder
+                    .comment("Display the bar values [false/true|default:false]")
+                    .translation(getTranslation("bar_value"))
+                    .define("bar_value", false);
+            barHeightPos = builder
+                    .comment("Height of the position of the bars [0..100|default:62]")
+                    .translation(getTranslation("bar_height_pos"))
+                    .defineInRange("bar_height_pos", 62, 0, 100);
+            barColorEnergy = builder
+                    .comment("Color of the speed bar [0..16777215|default:65280]")
+                    .translation(getTranslation("bar_color_energy"))
+                    .defineInRange("bar_color_energy", 65280, 0, 16777215);
+            barColorSpeed = builder
+                    .comment("Color of the speed bar [0..16777215|default:16711680]")
+                    .translation(getTranslation("bar_color_speed"))
+                    .defineInRange("bar_color_speed", 16711680, 0, 16777215);
+            barGraduationEnergy = builder
+                    .comment("Type of graduation of the energy bar")
+                    .translation(getTranslation("bar_graduation_energy"))
+                    .defineEnum("bar_graduation_energy", Graduation.SMALLER);
+            barGraduationSpeed = builder
+                    .comment("Type of graduation of the speed bar")
+                    .translation(getTranslation("bar_graduation_speed"))
+                    .defineEnum("bar_graduation_speed", Graduation.SMALLER);
+            builder.pop();
+        }
+    }
+
+    public static class DeniedDimensionToFly {
+        public final ConfigValue<List<String>> deniedDimensionBroom;
+        public final ConfigValue<List<String>> deniedDimensionCarpet;
+
+        public DeniedDimensionToFly(ForgeConfigSpec.Builder builder) {
+            builder.comment("Denied dimensions to ride a flying thing - example : minecraft:the_nether").push("denied_dimensions_to_fly");
+            deniedDimensionBroom = builder
+                    .comment("Dimensions for the brooms")
+                    .translation(getTranslation("denied_dimension_broom"))
+                    .define("denied_dimension_broom", new ArrayList<>());
+            deniedDimensionCarpet = builder
+                    .comment("Dimensions for the carpets")
+                    .translation(getTranslation("denied_dimension_carpet"))
+                    .define("denied_dimension_carpet", new ArrayList<>());
+            builder.pop();
+        }
+    }
+
+    public static class SharedDatas {
+        public final ConfigValue<Integer> speedMax;
+        public final ConfigValue<Integer> accelerationMax;
+        public final ConfigValue<Integer> accelerationIncrement;
+        public final ConfigValue<Integer> speedMaxNoEnergy;
+        public final ConfigValue<Integer> maxEnergy;
+        public final ConfigValue<Boolean> allowTombstoneSoulbound;
+
+        public SharedDatas(ForgeConfigSpec.Builder builder) {
+            builder.comment("Theses options are automatically sync on the client").push("shared_datas");
+
+            speedMax = builder
+                    .comment("Maximum Speed [0..200|default:90]")
+                    .translation(getTranslation("speed_max"))
+                    .defineInRange("speed_max", 90, 0, 200);
+            accelerationMax = builder
+                    .comment("Maximum acceleration [0..100|default:35]")
+                    .translation(getTranslation("acceleration_max"))
+                    .defineInRange("acceleration_max", 35, 0, 100);
+            accelerationIncrement = builder
+                    .comment("Acceleration increment [1..20|default:7]")
+                    .translation(getTranslation("acceleration_increment"))
+                    .defineInRange("acceleration_increment", 7, 1, 20);
+            speedMaxNoEnergy = builder
+                    .comment("Maximum speed with no energy [0..300|default:30]")
+                    .translation(getTranslation("speed_max_no_energy"))
+                    .defineInRange("speed_max_no_energy", 30, 0, 300);
+            maxEnergy = builder
+                    .comment("Maximum energy [100..MAX|default:1000]")
+                    .translation(getTranslation("max_energy"))
+                    .defineInRange("max_energy", 1000, 100, Integer.MAX_VALUE);
+            allowTombstoneSoulbound = builder
+                    .comment("Allow applying Soulbound [false/true|default:true]")
+                    .translation(getTranslation("allow_tombstone_soulbound"))
+                    .define("allow_tombstone_soulbound", true);
+
+            builder.pop();
+        }
+    }
+
+    private static String getTranslation(String name) {
+        return AccessMod.MODID + ".config." + name;
+    }
+
+    public static final Client client;
+    public static final ForgeConfigSpec CLIENT_SPEC;
+    static {
+        final Pair<Client, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(Client::new);
+        client = specPair.getLeft();
+        CLIENT_SPEC = specPair.getRight();
+    }
+
+    public static final General general;
+    public static final DeniedDimensionToFly deniedDimensionToFly;
+    public static final ForgeConfigSpec GENERAL_SPEC;
+    static {
+        ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+        general = new General(BUILDER);
+        deniedDimensionToFly = new DeniedDimensionToFly(BUILDER);
+        GENERAL_SPEC = BUILDER.build();
+    }
+
+    public static final SharedDatas shared_datas;
+    public static final ForgeConfigSpec SHARED_SPEC;
+    static {
+        final Pair<SharedDatas, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(SharedDatas::new);
+        shared_datas = specPair.getLeft();
+        SHARED_SPEC = specPair.getRight();
+    }
+
+    /*
+    @Mod.EventBusSubscriber(modid = AccessMod.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+    public static class ConfigEvent {
+        @SubscribeEvent(priority = EventPriority.LOWEST)
+        public static void onReloadConfig(ModConfig.Reloading event) {
+            if (event.getConfig().getModId().equals(AccessMod.MODID) && event.getConfig().getType() == ModConfig.Type.SERVER) {
+                ModFlyingThings.PROXY.markConfigDirty();
             }
-        } catch (Exception ignored) {
         }
-        return null;
+    }
+     */
+
+    /*
+    public static UpdateConfigMessage getUpdatePacket() {
+        int[] intConfigs = new int[IntConfigs.values().length];
+        for (IntConfigs config : IntConfigs.values()) {
+            intConfigs[config.ordinal()] = config.get();
+        }
+        return new UpdateConfigMessage(shared_datas.allowTombstoneSoulbound.get(), intConfigs);
+    }
+     */
+
+    public static void updateConfig(boolean allowTombstoneSoulbound, int[] intConfigs) {
+        shared_datas.allowTombstoneSoulbound.set(allowTombstoneSoulbound);
+        for (IntConfigs config : IntConfigs.values()) {
+            config.set(intConfigs[config.ordinal()]);
+        }
     }
 
-    public static boolean isPacketToClient(NetworkEvent.Context ctx) {
-        return ctx.getDirection().getOriginationSide() == LogicalSide.SERVER && ctx.getDirection().getReceptionSide() == LogicalSide.CLIENT;
-    }
+    enum IntConfigs {
+        speedMax(shared_datas.speedMax),
+        accelerationMax(shared_datas.accelerationMax),
+        accelerationIncrement(shared_datas.accelerationIncrement),
+        speedMaxNoEnergy(shared_datas.speedMaxNoEnergy),
+        maxEnergy(shared_datas.maxEnergy);
 
-    public static boolean isPacketToServer(NetworkEvent.Context ctx) {
-        return ctx.getDirection().getOriginationSide() == LogicalSide.CLIENT && ctx.getDirection().getReceptionSide() == LogicalSide.SERVER;
-    }
+        private ConfigValue<Integer> supplier;
 
-    public static float[] getRGBColor4F(int color) {
-        float[] rgb = new float[4];
-        rgb[0] = (float) (color >> 16 & 255) / 255f;
-        rgb[1] = (float) (color >> 8 & 255) / 255f;
-        rgb[2] = (float) (color & 255) / 255f;
-        rgb[3] = (float) (color >> 24 & 255) / 255f;
-        return rgb;
-    }
+        IntConfigs(ConfigValue<Integer> supplier) {
+            this.supplier = supplier;
+        }
 
-    public static float[] getRGBColor3F(int color) {
-        float[] rgb = new float[3];
-        rgb[0] = (color >> 16 & 255) / 255f;
-        rgb[1] = (color >> 8 & 255) / 255f;
-        rgb[2] = (color & 255) / 255f;
-        return rgb;
-    }
+        public int get() {
+            return this.supplier.get();
+        }
 
-    public static int[] getRGBColor3I(int color) {
-        int[] rgb = new int[3];
-        rgb[0] = color >> 16 & 255;
-        rgb[1] = color >> 8 & 255;
-        rgb[2] = color & 255;
-        return rgb;
-    }
-
-    public static void fillGradient(int left, int top, int right, int bottom, int color1, int color2, int zLevel, boolean isHorizontal) {
-        float[] argb1 = Helper.getRGBColor4F(color1);
-        float[] argb2 = Helper.getRGBColor4F(color2);
-
-        RenderSystem.disableTexture();
-        RenderSystem.enableBlend();
-        RenderSystem.disableAlphaTest();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.shadeModel(GL11.GL_SMOOTH);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferbuilder = tessellator.getBuilder();
-        bufferbuilder.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
-        makeVertex(bufferbuilder, right, top, zLevel, isHorizontal ? argb2 : argb1);
-        makeVertex(bufferbuilder, left, top, zLevel, argb1);
-        makeVertex(bufferbuilder, left, bottom, zLevel, isHorizontal ? argb1 : argb2);
-        makeVertex(bufferbuilder, right, bottom, zLevel, argb2);
-        tessellator.end();
-        RenderSystem.shadeModel(GL11.GL_FLAT);
-        RenderSystem.disableBlend();
-        RenderSystem.enableAlphaTest();
-        RenderSystem.enableTexture();
-    }
-
-    private static void makeVertex(BufferBuilder bufferbuilder, int x, int y, int zLevel, float[] colorArray) {
-        bufferbuilder.vertex(x, y, zLevel).color(colorArray[0], colorArray[1], colorArray[2], colorArray[3]).endVertex();
+        public void set(int value) {
+            this.supplier.set(value);
+        }
     }
 }

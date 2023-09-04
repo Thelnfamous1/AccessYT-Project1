@@ -675,189 +675,167 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-package ovh.corrail.flyingthings.item;
+package ovh.corail.flyingthings.helper;
 
-import ovh.corrail.flyingthings.config.ConfigFlyingThings;
-import ovh.corrail.flyingthings.carpet.EntityAbstractFlyingThing;
-import ovh.corrail.flyingthings.helper.NBTStackHelper;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
+import com.mojang.blaze3d.systems.RenderSystem;
+import ovh.corail.flyingthings.config.ConfigFlyingThings;
+import me.infamous.accessmod.common.registry.AccessModEntityTypes;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.player.ClientPlayerEntity;
+import net.minecraft.client.renderer.BufferBuilder;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.EnchantedBookItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
+import net.minecraft.potion.Effect;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.TranslationTextComponent;
+import net.minecraft.util.registry.DynamicRegistries;
 import net.minecraft.world.DimensionType;
-import net.minecraft.world.World;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fml.LogicalSide;
+import net.minecraftforge.fml.LogicalSidedProvider;
+import net.minecraftforge.fml.network.NetworkEvent;
+import org.lwjgl.opengl.GL11;
 
-public abstract class ItemAbstractFlyingThing extends ItemGeneric {
-    private static final ResourceLocation SOULBOUND_LOCATION = new ResourceLocation("tombstone", "soulbound");
+import javax.annotation.Nullable;
+import java.time.LocalDate;
+import java.time.temporal.ChronoField;
+import java.util.Random;
 
-    abstract EntityType<?> getEntityType();
+public class Helper {
+    @Nullable
+    private static Boolean isHalloween = null;
 
-    abstract boolean canFlyInDimension(DimensionType dimType);
+    public static final Random random = new Random();
 
-    abstract void onEntitySpawn(ItemStack stack, EntityAbstractFlyingThing entity);
-
-    ItemAbstractFlyingThing(String name, Item.Properties builder) {
-        super(name, builder);
+    public static int getRandom(int min, int max) {
+        return random.nextInt(max - min + 1) + min;
     }
 
-    @Override
-    public ActionResult<ItemStack> use(World world, PlayerEntity player, Hand hand) {
-        ItemStack stack = player.getItemInHand(hand);
-        if (player.isPassenger() || player.getCooldowns().isOnCooldown(this)) {
-            return ActionResult.fail(stack);
+    public static boolean isValidPlayer(@Nullable Entity entity) {
+        return entity instanceof PlayerEntity;
+    }
+
+    public static boolean isValidPlayerMP(@Nullable Entity entity) {
+        return isValidPlayer(entity) && !entity.level.isClientSide;
+    }
+
+    public static boolean isFlyingthing(@Nullable Entity entity) {
+        return entity != null && (/*entity.getType() == AccessModEntityTypes.ENCHANTED_BROOM.get() ||*/ entity.getType() == AccessModEntityTypes.MAGIC_CARPET.get());
+    }
+
+    public static boolean isBoss(@Nullable Entity entity) {
+        return entity != null && !entity.canChangeDimensions();
+    }
+
+    public static boolean isRidingFlyingThing(@Nullable Entity entity) {
+        return entity != null && isFlyingthing(entity.getVehicle());
+    }
+
+    public static boolean isControllingFlyingThing(@Nullable Entity entity) {
+        return isRidingFlyingThing(entity) && entity.getVehicle().getControllingPassenger() == entity;
+    }
+
+    public static String getDimensionString(DimensionType dimensionType) {
+        ResourceLocation rl = DynamicRegistries.builtin().dimensionTypes().getKey(dimensionType);
+        return rl == null ? "" : rl.toString();
+    }
+
+    public static boolean isDateAroundHalloween() {
+        if (ConfigFlyingThings.general.persistantHolidays.get()) {
+            return true;
         }
-        if (stack.getItem() != this) {
-            return ActionResult.pass(stack);
+        if (isHalloween == null) {
+            LocalDate date = LocalDate.now();
+            isHalloween = date.get(ChronoField.MONTH_OF_YEAR) + 1 == 10 && date.get(ChronoField.DAY_OF_MONTH) >= 20 || date.get(ChronoField.MONTH_OF_YEAR) + 1 == 11 && date.get(ChronoField.DAY_OF_MONTH) <= 3;
         }
-        if (!world.isClientSide) {
-            MinecraftServer server = player.level.getServer();
-            if (server != null && !server.isFlightAllowed()) {
-                player.sendMessage(new TranslationTextComponent("flying_things.message.flight_not_allowed"), Util.NIL_UUID);
-                return ActionResult.fail(stack);
+        return isHalloween;
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    public static String getNameForKeybindSneak() {
+        return Minecraft.getInstance().options.keyShift.getName();
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    public static void removeClientPotionEffect(Effect effect) {
+        ClientPlayerEntity player = Minecraft.getInstance().player;
+        if (player != null) {
+            player.removeEffect(effect);
+        }
+    }
+
+    @Nullable
+    public static MinecraftServer getServer() {
+        try {
+            MinecraftServer server = LogicalSidedProvider.INSTANCE.get(LogicalSide.SERVER);
+            if (server != null && Thread.currentThread() == server.getRunningThread()) {
+                return server;
             }
-            if (!canFlyInDimension(world.dimensionType())) {
-                player.sendMessage(new TranslationTextComponent("flying_things.message.denied_dimension_to_fly", stack.getDisplayName()), Util.NIL_UUID);
-                return ActionResult.fail(stack);
-            }
-            player.getCooldowns().addCooldown(this, 100);
-            EntityAbstractFlyingThing entity;
-            try {
-                entity = (EntityAbstractFlyingThing) getEntityType().create(world);
-            } catch (Exception e) {
-                return ActionResult.fail(stack);
-            }
-            if (entity != null) {
-                entity.setModelType(getModelType(player.getItemInHand(hand)));
-                entity.setEnergy(getEnergy(stack));
-                entity.setSoulbound(hasSoulbound(stack));
-                if (stack.hasCustomHoverName()) {
-                    entity.setCustomName(stack.getDisplayName());
-                }
-                entity.moveTo(player.getX(), player.getY(), player.getZ(), player.yRot, 0f);
-                entity.setYHeadRot(player.yRot);
-                onEntitySpawn(stack, entity);
-                world.addFreshEntity(entity);
-                if (!player.isCrouching()) {
-                    player.startRiding(entity);
-                }
-                player.setItemInHand(hand, ItemStack.EMPTY);
-            }
+        } catch (Exception ignored) {
         }
-        return ActionResult.success(stack);
+        return null;
     }
 
-    @Override
-    public boolean showDurabilityBar(ItemStack stack) {
-        return getEnergy(stack) < ConfigFlyingThings.shared_datas.maxEnergy.get();
+    public static boolean isPacketToClient(NetworkEvent.Context ctx) {
+        return ctx.getDirection().getOriginationSide() == LogicalSide.SERVER && ctx.getDirection().getReceptionSide() == LogicalSide.CLIENT;
     }
 
-    @Override
-    public int getRGBDurabilityForDisplay(ItemStack stack) {
-        return MathHelper.hsvToRgb(Math.max(0f, (float) (1f - getDurabilityForDisplay(stack))) / 1.5f, 1f, 1f);
+    public static boolean isPacketToServer(NetworkEvent.Context ctx) {
+        return ctx.getDirection().getOriginationSide() == LogicalSide.CLIENT && ctx.getDirection().getReceptionSide() == LogicalSide.SERVER;
     }
 
-    @Override
-    public double getDurabilityForDisplay(ItemStack stack) {
-        return 1f - (double) getEnergy(stack) / (double) ConfigFlyingThings.shared_datas.maxEnergy.get();
+    public static float[] getRGBColor4F(int color) {
+        float[] rgb = new float[4];
+        rgb[0] = (float) (color >> 16 & 255) / 255f;
+        rgb[1] = (float) (color >> 8 & 255) / 255f;
+        rgb[2] = (float) (color & 255) / 255f;
+        rgb[3] = (float) (color >> 24 & 255) / 255f;
+        return rgb;
     }
 
-    public static void setEnergy(ItemStack stack, int energy) {
-        if (stack.getItem() instanceof ItemAbstractFlyingThing) {
-            NBTStackHelper.setInteger(stack, "energy", MathHelper.clamp(energy, 0, ConfigFlyingThings.shared_datas.maxEnergy.get()));
-        }
+    public static float[] getRGBColor3F(int color) {
+        float[] rgb = new float[3];
+        rgb[0] = (color >> 16 & 255) / 255f;
+        rgb[1] = (color >> 8 & 255) / 255f;
+        rgb[2] = (color & 255) / 255f;
+        return rgb;
     }
 
-    private static int getEnergy(ItemStack stack) {
-        if (stack.getItem() instanceof ItemAbstractFlyingThing) {
-            if (NBTStackHelper.hasKeyName(stack, "energy")) {
-                return MathHelper.clamp(NBTStackHelper.getInteger(stack, "energy"), 0, ConfigFlyingThings.shared_datas.maxEnergy.get());
-            } else {
-                setEnergy(stack, ConfigFlyingThings.shared_datas.maxEnergy.get());
-                return ConfigFlyingThings.shared_datas.maxEnergy.get();
-            }
-        }
-        return 0;
+    public static int[] getRGBColor3I(int color) {
+        int[] rgb = new int[3];
+        rgb[0] = color >> 16 & 255;
+        rgb[1] = color >> 8 & 255;
+        rgb[2] = color & 255;
+        return rgb;
     }
 
-    @Override
-    public void inventoryTick(ItemStack stack, World world, Entity entity, int slot, boolean isSelected) {
-        if (!world.isClientSide && getEnergy(stack) < ConfigFlyingThings.shared_datas.maxEnergy.get() && entity.tickCount % (ConfigFlyingThings.general.timeToRecoverEnergy.get() * 20) == 0) {
-            setEnergy(stack, getEnergy(stack) + getActualRegen(stack, world, entity, slot, isSelected));
-        }
+    public static void fillGradient(int left, int top, int right, int bottom, int color1, int color2, int zLevel, boolean isHorizontal) {
+        float[] argb1 = Helper.getRGBColor4F(color1);
+        float[] argb2 = Helper.getRGBColor4F(color2);
+
+        RenderSystem.disableTexture();
+        RenderSystem.enableBlend();
+        RenderSystem.disableAlphaTest();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.shadeModel(GL11.GL_SMOOTH);
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder bufferbuilder = tessellator.getBuilder();
+        bufferbuilder.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_COLOR);
+        makeVertex(bufferbuilder, right, top, zLevel, isHorizontal ? argb2 : argb1);
+        makeVertex(bufferbuilder, left, top, zLevel, argb1);
+        makeVertex(bufferbuilder, left, bottom, zLevel, isHorizontal ? argb1 : argb2);
+        makeVertex(bufferbuilder, right, bottom, zLevel, argb2);
+        tessellator.end();
+        RenderSystem.shadeModel(GL11.GL_FLAT);
+        RenderSystem.disableBlend();
+        RenderSystem.enableAlphaTest();
+        RenderSystem.enableTexture();
     }
 
-    public int getActualRegen(ItemStack stack, World world, Entity entity, int slot, boolean isSelected) {
-        return 1;
-    }
-
-    @Override
-    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
-        return oldStack.getItem() != newStack.getItem();
-    }
-
-    @Override
-    public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment) {
-        if (enchantment == null) {
-            return false;
-        }
-        assert enchantment.getRegistryName() != null;
-        return ConfigFlyingThings.shared_datas.allowTombstoneSoulbound.get() && stack.getEnchantmentTags().size() == 0 && enchantment.getRegistryName().equals(SOULBOUND_LOCATION);
-    }
-
-    @Override
-    public int getItemEnchantability(ItemStack stack) {
-        return 1;
-    }
-
-    @Override
-    public boolean isBookEnchantable(ItemStack stack, ItemStack book) {
-        return ConfigFlyingThings.shared_datas.allowTombstoneSoulbound.get() && stack.getEnchantmentTags().size() == 0 && EnchantedBookItem.getEnchantments(book).size() == 1 && hasSoulbound(book);
-    }
-
-    public static void setSoulbound(ItemStack stack) {
-        if (!ConfigFlyingThings.shared_datas.allowTombstoneSoulbound.get()) {
-            return;
-        }
-        Enchantment soulbound = ForgeRegistries.ENCHANTMENTS.getValue(SOULBOUND_LOCATION);
-        if (soulbound == null) {
-            return;
-        }
-        stack.enchant(soulbound, 1);
-    }
-
-    private static boolean hasSoulbound(ItemStack stack) {
-        if (!ConfigFlyingThings.shared_datas.allowTombstoneSoulbound.get()) {
-            return false;
-        }
-        Enchantment soulbound = ForgeRegistries.ENCHANTMENTS.getValue(SOULBOUND_LOCATION);
-        if (soulbound == null) {
-            return false;
-        }
-        for (Enchantment enchant : EnchantmentHelper.getEnchantments(stack).keySet()) {
-            if (SOULBOUND_LOCATION.equals(enchant.getRegistryName())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static ItemStack setModelType(ItemStack stack, int modelType) {
-        return NBTStackHelper.setInteger(stack, "model_type", modelType);
-    }
-
-    public static int getModelType(ItemStack stack) {
-        return NBTStackHelper.getInteger(stack, "model_type", 0);
+    private static void makeVertex(BufferBuilder bufferbuilder, int x, int y, int zLevel, float[] colorArray) {
+        bufferbuilder.vertex(x, y, zLevel).color(colorArray[0], colorArray[1], colorArray[2], colorArray[3]).endVertex();
     }
 }

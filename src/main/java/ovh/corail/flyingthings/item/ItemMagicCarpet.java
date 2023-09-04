@@ -675,135 +675,103 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-package ovh.corrail.flyingthings.carpet;
+package ovh.corail.flyingthings.item;
 
-import ovh.corrail.flyingthings.config.ConfigFlyingThings;
-import ovh.corrail.flyingthings.item.ItemAbstractFlyingThing;
+import me.infamous.accessmod.AccessMod;
+import ovh.corail.flyingthings.helper.Helper;
+import ovh.corail.flyingthings.render.TEISRMagicCarpet;
+import ovh.corail.flyingthings.config.ConfigFlyingThings;
+import ovh.corail.flyingthings.carpet.EntityAbstractFlyingThing;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
-import me.infamous.accessmod.common.registry.AccessModItems;
-import ovh.corrail.flyingthings.helper.Helper;
-import ovh.corrail.flyingthings.helper.TimeHelper;
 import net.minecraft.block.Blocks;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.player.ClientPlayerEntity;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.util.ITooltipFlag;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.particles.ParticleTypes;
-import net.minecraft.util.Hand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvents;
+import net.minecraft.potion.Effects;
+import net.minecraft.util.NonNullList;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.DimensionType;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.network.FMLPlayMessages;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
-import java.util.stream.IntStream;
+import javax.annotation.Nullable;
+import java.util.List;
 
-public class EntityMagicCarpet extends EntityAbstractFlyingThing {
-    private static final DataParameter<Integer> ENERGY = EntityDataManager.defineId(EntityMagicCarpet.class, DataSerializers.INT);
-    private static final DataParameter<Integer> TIME_SINCE_HIT = EntityDataManager.defineId(EntityMagicCarpet.class, DataSerializers.INT);
-    private static final DataParameter<Float> DAMAGE_TAKEN = EntityDataManager.defineId(EntityMagicCarpet.class, DataSerializers.FLOAT);
-    private static final DataParameter<Integer> FORWARD_DIRECTION = EntityDataManager.defineId(EntityMagicCarpet.class, DataSerializers.INT);
-    private static final DataParameter<Integer> MODEL_TYPE = EntityDataManager.defineId(EntityMagicCarpet.class, DataSerializers.INT);
+public class ItemMagicCarpet extends ItemAbstractFlyingThing {
+    private static final int MAX_ID = 19;
 
-    public EntityMagicCarpet(EntityType<EntityMagicCarpet> entityType, World world) {
-        super(entityType, world);
-    }
-
-    public EntityMagicCarpet(World world, double x, double y, double z) {
-        super(AccessModEntityTypes.MAGIC_CARPET.get(), world, x, y, z);
-    }
-
-    public EntityMagicCarpet(FMLPlayMessages.SpawnEntity spawnEntity, World world) {
-        this(AccessModEntityTypes.MAGIC_CARPET.get(), world);
+    public ItemMagicCarpet() {
+        super("magic_carpet", getBuilder(true).stacksTo(1).setISTER(() -> TEISRMagicCarpet::new));
     }
 
     @Override
-    public ItemStack getStack() {
-        ItemStack stack = new ItemStack(AccessModItems.MAGIC_CARPET.get());
-        ItemAbstractFlyingThing.setModelType(stack, getModelType());
-        if (hasCustomName()) {
-            stack.setHoverName(this.getCustomName());
+    EntityType<?> getEntityType() {
+        return AccessModEntityTypes.MAGIC_CARPET.get();
+    }
+
+
+
+    @Override
+    public void fillItemCategory(ItemGroup group, NonNullList<ItemStack> items) {
+        if (allowdedIn(group)) {
+            for (int i = 0; i <= MAX_ID; i++) {
+                ItemStack stack = new ItemStack(this);
+                setModelType(stack, i);
+                items.add(stack);
+            }
         }
-        ItemAbstractFlyingThing.setEnergy(stack, getEnergy());
-        if (hasSoulbound()) {
-            ItemAbstractFlyingThing.setSoulbound(stack);
-        }
-        return stack;
     }
 
     @Override
     public boolean canFlyInDimension(DimensionType dimensionType) {
-        if (this.level.isClientSide) {
-            return true;
-        }
         return !ConfigFlyingThings.deniedDimensionToFly.deniedDimensionCarpet.get().contains(Helper.getDimensionString(dimensionType));
     }
 
     @Override
-    protected boolean onInteractWithPlayerItem(ItemStack stack, PlayerEntity player, Hand hand) {
-        if (false /*stack.getItem() == AccessModItems.PUMPKIN_STICK.get()*/) {
-            int res = Helper.getRandom(9, 13);
-            if (res == getModelType()) {
-                res = (res == 13 ? 9 : res + 1);
-            }
-            setModelType(res);
-            if (!player.abilities.instabuild) {
-                stack.shrink(1);
-            }
-            return true;
-        } else if (stack.getItem() == Items.NAME_TAG && stack.hasCustomHoverName()) {
-            setCustomName(stack.getDisplayName());
-            if (!player.abilities.instabuild) {
-                stack.shrink(1);
-            }
-            return true;
-        }
-        return false;
+    public int getActualRegen(ItemStack stack, World world, Entity entity, int slot, boolean isSelected) {
+        boolean hasSpecialRegen = ConfigFlyingThings.general.allowSpecialRegen.get() && world.isLoaded(entity.blockPosition().below()) && world.getBlockState(entity.blockPosition().below()).getBlock() == Blocks.SOUL_SAND;
+        return hasSpecialRegen ? 20 : 1;
     }
 
     @Override
-    public void tick() {
-        if (ConfigFlyingThings.general.allowSpecialRegen.get() && getEnergy() < ConfigFlyingThings.shared_datas.maxEnergy.get() && TimeHelper.atInterval(this.tickCount, 10) && this.level.isLoaded(blockPosition().below()) && this.level.getBlockState(blockPosition().below()).getBlock() == Blocks.SOUL_SAND) {
-            if (!this.level.isClientSide) {
-                setEnergy(getEnergy() + 4);
-                this.level.playSound(null, blockPosition(), SoundEvents.ILLUSIONER_CAST_SPELL, SoundCategory.PLAYERS, 0.5f, 0.5f);
-            } else {
-                IntStream.range(0, Helper.getRandom(10, 45)).forEach(i -> this.level.addParticle(ParticleTypes.WITCH, this.getX() + this.random.nextGaussian() * 0.4D, getBoundingBox().maxY + this.random.nextGaussian() * 0.12999999523162842d, this.getZ() + this.random.nextGaussian() * 0.4d, 0d, 0d, 0d));
+    @OnlyIn(Dist.CLIENT)
+    public void appendHoverText(ItemStack stack, @Nullable World world, List<ITextComponent> list, ITooltipFlag flag) {
+        if (!Screen.hasShiftDown()) {
+            list.add(new TranslationTextComponent(AccessMod.MODID + ".message.hold_key", "SHIFT").append(" ").append(new TranslationTextComponent(AccessMod.MODID + ".message.for_more_infos")));
+        } else {
+            list.add(new TranslationTextComponent(AccessMod.MODID + ".item.magic_carpet.desc1"));
+            list.add(new TranslationTextComponent(AccessMod.MODID + ".item.magic_carpet.desc2", Helper.getNameForKeybindSneak()));
+        }
+        int id = getModelType(stack);
+        if ((id == 18 || id == 19)) {
+            ClientPlayerEntity player = Minecraft.getInstance().player;
+            if (player != null && !player.hasEffect(Effects.HERO_OF_THE_VILLAGE)) {
+                list.add(new TranslationTextComponent(AccessMod.MODID + ".message.require_effect", new StringTextComponent("[").append(new TranslationTextComponent(Effects.HERO_OF_THE_VILLAGE.getDescriptionId())).append("]")));
             }
         }
-        super.tick();
     }
 
     @Override
-    public double getPassengersRidingOffset() {
-        return 0.1d;
+    public ITextComponent getName(ItemStack stack) {
+        int modelType = getModelType(stack);
+        String postName = "";
+        if (modelType == 18 || modelType == 19) {
+            postName = ".pillage";
+        } else if (modelType > 8 && modelType < 14) {
+            postName = ".halloween";
+        }
+        return new TranslationTextComponent(getDescriptionId(stack) + postName);
     }
 
     @Override
-    protected DataParameter<Integer> getDataEnergy() {
-        return ENERGY;
-    }
-
-    @Override
-    protected DataParameter<Float> getDataDamageTaken() {
-        return DAMAGE_TAKEN;
-    }
-
-    @Override
-    protected DataParameter<Integer> getDataTimeSinceHit() {
-        return TIME_SINCE_HIT;
-    }
-
-    @Override
-    protected DataParameter<Integer> getDataForwardDirection() {
-        return FORWARD_DIRECTION;
-    }
-
-    @Override
-    protected DataParameter<Integer> getDataModelType() {
-        return MODEL_TYPE;
+    void onEntitySpawn(ItemStack stack, EntityAbstractFlyingThing entity) {
     }
 }

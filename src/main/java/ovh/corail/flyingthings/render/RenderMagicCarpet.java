@@ -675,84 +675,117 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-package ovh.corrail.flyingthings.gui;
+package ovh.corail.flyingthings.render;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
-import com.mojang.blaze3d.systems.RenderSystem;
-import ovh.corrail.flyingthings.config.ConfigFlyingThings;
-import ovh.corrail.flyingthings.carpet.EntityAbstractFlyingThing;
-import ovh.corrail.flyingthings.helper.Helper;
-import ovh.corrail.flyingthings.helper.TextureLocation;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.entity.player.ClientPlayerEntity;
-import net.minecraft.client.gui.AbstractGui;
-import net.minecraft.client.gui.screen.Screen;
+import com.mojang.blaze3d.vertex.IVertexBuilder;
+import ovh.corail.flyingthings.helper.Functions;
+import ovh.corail.flyingthings.helper.TextureLocation;
+import ovh.corail.flyingthings.config.ConfigFlyingThings;
+import ovh.corail.flyingthings.carpet.EntityMagicCarpet;
+import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.culling.ClippingHelper;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererManager;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.math.vector.Matrix3f;
+import net.minecraft.util.math.vector.Matrix4f;
+import net.minecraft.util.math.vector.Vector3f;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-@SuppressWarnings("FieldCanBeLocal")
-public class GuiOverlayEnergy extends Screen {
-    public final int width, height, guiLeft, barLength;
+public final class RenderMagicCarpet extends EntityRenderer<EntityMagicCarpet> {
+    private static final float TOP_MIN_U = 0f, TOP_MIN_V = 0f, TOP_MAX_U = 1f, TOP_MAX_V = 1f;
+    private static final float BOTTOM_MIN_U = 0f, BOTTOM_MIN_V = 0f, BOTTOM_MAX_U = 1f, BOTTOM_MAX_V = 1f;
+    private static final int FACE_COUNT = 16, VERTEX_COUNT = FACE_COUNT + 1;
+    private static final float WIDTH = 1.4f, LENGTH = WIDTH * 1.5f;
+    private static final float X1 = WIDTH / 2f, X0 = -WIDTH / 2f;
+    private static final float[] VERT_Y = new float[VERTEX_COUNT];
+    private static final float[] VERT_Z = new float[VERTEX_COUNT];
 
-    public GuiOverlayEnergy(Minecraft mc, MatrixStack matrixStack) {
-        super(new StringTextComponent("Flying Things Energy"));
-        this.minecraft = mc;
-        this.width = mc.getWindow().getGuiScaledWidth();
-        this.height = mc.getWindow().getGuiScaledHeight();
-        this.barLength = 182;
-        this.guiLeft = (this.width - this.barLength) / 2;
-        drawScreen(matrixStack);
+    public RenderMagicCarpet(EntityRendererManager manager) {
+        super(manager);
+        this.shadowRadius = this.shadowStrength = 0.2f;
     }
 
-    private void drawScreen(MatrixStack matrixStack) {
-        final ClientPlayerEntity player = Minecraft.getInstance().player;
-        if (Helper.isRidingFlyingThing(player)) {
-            EntityAbstractFlyingThing mount = ((EntityAbstractFlyingThing) player.getVehicle());
-            assert mount != null;
-            drawBars(this, matrixStack, this.guiLeft, this.height * ConfigFlyingThings.client.barHeightPos.get() / 100, this.barLength, mount.getEnergy(), mount.speed);
-        }
+    @Override
+    public void render(EntityMagicCarpet entity, float entityYaw, float partialTicks, MatrixStack matrixStack, IRenderTypeBuffer iRenderTypeBuffer, int packedLight) {
+        render(entity, entityYaw, entity.tickCount, partialTicks, matrixStack, iRenderTypeBuffer, packedLight, false);
+        super.render(entity, entityYaw, partialTicks, matrixStack, iRenderTypeBuffer, packedLight);
     }
 
-    static void drawBars(Screen screen, MatrixStack matrixStack, int guiLeft, int guiTop, int barWidth, int energy, double mountSpeed) {
-        Minecraft mc = Minecraft.getInstance();
-        RenderSystem.enableBlend();
-        mc.getTextureManager().bind(TextureLocation.BARS);
-        int colorPosY = 60;
-        int filled = (int) (energy * barWidth / (double) ConfigFlyingThings.shared_datas.maxEnergy.get()) + 1;
-        float[] colors = Helper.getRGBColor3F(ConfigFlyingThings.client.barColorEnergy.get());
-        RenderSystem.color4f(colors[0], colors[1], colors[2], 0.5f);
-        screen.blit(matrixStack, guiLeft, guiTop, 0, colorPosY, barWidth, 5);
-        if (filled > 0) {
-            RenderSystem.color4f(colors[0], colors[1], colors[2], 1f);
-            screen.blit(matrixStack,guiLeft, guiTop, 0, colorPosY + 5, filled, 5);
-        }
-        RenderSystem.color4f(1f, 1f, 1f, 1f);
-        screen.blit(matrixStack,guiLeft, guiTop, 0, ConfigFlyingThings.client.barGraduationEnergy.get().ordinal() * 10 + 80, barWidth, 5);
+    @Override
+    public ResourceLocation getTextureLocation(EntityMagicCarpet entity) {
+        return getTexture(entity);
+    }
 
-        float speed = (float) mountSpeed * 100f;
-        float speedMax = (float) ConfigFlyingThings.shared_datas.speedMax.get();
-        if (mountSpeed >= speedMax) {
-            filled = barWidth + 1;
-        } else {
-            filled = (int) (speed * barWidth / speedMax) + 1;
+    private static ResourceLocation getTexture(EntityMagicCarpet entity) {
+        return TextureLocation.TEXTURE_CARPET[(entity.getModelType() < TextureLocation.TEXTURE_CARPET.length ? entity.getModelType() : 0)];
+    }
+
+    @Override
+    public boolean shouldRender(EntityMagicCarpet entity, ClippingHelper camera, double camX, double camY, double camZ) {
+        return entity.level == null || super.shouldRender(entity, camera, camX, camY, camZ);
+    }
+
+    public static void render(EntityMagicCarpet entity, float entityYaw, int ticksExisted, float partialTicks, MatrixStack matrixStack, IRenderTypeBuffer iRenderTypeBuffer, int packedLight, boolean isTEISR) {
+        matrixStack.pushPose();
+        matrixStack.translate(0f, -0.7f, 0f);
+        matrixStack.mulPose(Vector3f.YP.rotationDegrees(180f - entityYaw));
+
+        if (!isTEISR) {
+            float f = (float) entity.getTimeSinceHit() - partialTicks;
+            float f1 = entity.getDamageTaken() - partialTicks;
+            if (f1 < 0f) {
+                f1 = 0f;
+            }
+            if (f > 0f) {
+                matrixStack.mulPose(Vector3f.XP.rotationDegrees(MathHelper.sin(f) * f * f1 / 10f * (float) entity.getForwardDirection()));
+            }
         }
-        colors = Helper.getRGBColor3F(ConfigFlyingThings.client.barColorSpeed.get());
-        RenderSystem.color4f(colors[0], colors[1], colors[2], 0.5f);
-        screen.blit(matrixStack,guiLeft, guiTop + 7, 0, colorPosY, barWidth, 5);
-        if (filled > 0) {
-            RenderSystem.color4f(colors[0], colors[1], colors[2], 1f);
-            screen.blit(matrixStack,guiLeft, guiTop + 7, 0, colorPosY + 5, filled, 5);
+
+        float ageInTicks = ticksExisted + partialTicks;
+        for (int i = 0; i < VERTEX_COUNT; i++) {
+            VERT_Y[i] = MathHelper.sin(ageInTicks * 0.1f + i * 0.25f) * 0.065f + 0.95f;
+            VERT_Z[i] = (float) i / FACE_COUNT * LENGTH - LENGTH / 2;
         }
-        RenderSystem.color4f(1f, 1f, 1f, 1f);
-        screen.blit(matrixStack,guiLeft, guiTop + 7, 0, ConfigFlyingThings.client.barGraduationSpeed.get().ordinal() * 10 + 80, barWidth, 5);
-        if (ConfigFlyingThings.client.barValue.get()) {
-            fill(matrixStack,guiLeft, guiTop + 14, guiLeft + 130, guiTop + 40, 0x20000000);
-            AbstractGui.drawString(matrixStack, mc.font, "Speed : " + MathHelper.floor(Math.min(mountSpeed * 100d, ConfigFlyingThings.shared_datas.speedMax.get())) + " / " + ConfigFlyingThings.shared_datas.speedMax.get(), guiLeft + 10, guiTop + 18, 0xa0ffffff);
-            AbstractGui.drawString(matrixStack, mc.font, "Energy : " + energy + " / " + ConfigFlyingThings.shared_datas.maxEnergy.get(), guiLeft + 10, guiTop + 28, 0xa0ffffff);
+
+        drawCarpet(matrixStack, Functions.VERTEX_BUILDER_CUTOUT.apply(iRenderTypeBuffer, getTexture(entity)), packedLight);
+
+        if (ConfigFlyingThings.client.renderEffect.get()) {
+            drawCarpet(matrixStack, Functions.VERTEX_BUILDER_GLINT.apply(iRenderTypeBuffer), packedLight);
         }
-        RenderSystem.defaultBlendFunc();
+
+        matrixStack.popPose();
+    }
+
+    private static void drawCarpet(MatrixStack matrixStack, IVertexBuilder buf, int packedLight) {
+        MatrixStack.Entry last = matrixStack.last();
+        Matrix4f matrix4f = last.pose();
+        Matrix3f matrixNormal = last.normal();
+
+        for (int i = 0; i < FACE_COUNT; i++) {
+            float t0 = (float) i / FACE_COUNT;
+            float t1 = (float) (i + 1) / FACE_COUNT;
+            float y0 = VERT_Y[i], y1 = VERT_Y[i + 1];
+            float z0 = VERT_Z[i], z1 = VERT_Z[i + 1];
+            // up top
+            float v00 = TOP_MIN_V + (TOP_MAX_V - TOP_MIN_V) * t0;
+            float v01 = TOP_MIN_V + (TOP_MAX_V - TOP_MIN_V) * t1;
+            buf.vertex(matrix4f, X0, y0, z0).color(1f, 1f, 1f, 1f).uv(TOP_MIN_U, v00).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(matrixNormal, 0f, 1f, 0f).endVertex();
+            buf.vertex(matrix4f, X0, y1, z1).color(1f, 1f, 1f, 1f).uv(TOP_MIN_U, v01).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(matrixNormal, 0f, 1f, 0f).endVertex();
+            buf.vertex(matrix4f, X1, y1, z1).color(1f, 1f, 1f, 1f).uv(TOP_MAX_U, v01).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(matrixNormal, 0f, 1f, 0f).endVertex();
+            buf.vertex(matrix4f, X1, y0, z0).color(1f, 1f, 1f, 1f).uv(TOP_MAX_U, v00).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(matrixNormal, 0f, 1f, 0f).endVertex();
+            // up bottom
+            float v10 = BOTTOM_MIN_V + (BOTTOM_MAX_V - BOTTOM_MIN_V) * t0;
+            float v11 = BOTTOM_MIN_V + (BOTTOM_MAX_V - BOTTOM_MIN_V) * t1;
+            buf.vertex(matrix4f, X0, y1, z1).color(1f, 1f, 1f, 1f).uv(BOTTOM_MIN_U, v11).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(matrixNormal, 0f, -1f, 0f).endVertex();
+            buf.vertex(matrix4f, X0, y0, z0).color(1f, 1f, 1f, 1f).uv(BOTTOM_MIN_U, v10).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(matrixNormal, 0f, -1f, 0f).endVertex();
+            buf.vertex(matrix4f, X1, y0, z0).color(1f, 1f, 1f, 1f).uv(BOTTOM_MAX_U, v10).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(matrixNormal, 0f, -1f, 0f).endVertex();
+            buf.vertex(matrix4f, X1, y1, z1).color(1f, 1f, 1f, 1f).uv(BOTTOM_MAX_U, v11).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(matrixNormal, 0f, -1f, 0f).endVertex();
+        }
     }
 }

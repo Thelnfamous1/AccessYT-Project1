@@ -675,60 +675,27 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-package ovh.corrail.flyingthings.helper;
+package ovh.corail.flyingthings.event;
 
 import me.infamous.accessmod.AccessMod;
-import net.minecraft.util.ResourceLocation;
+import ovh.corail.flyingthings.helper.Helper;
+import ovh.corail.flyingthings.gui.GuiOverlayEnergy;
+import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
-@OnlyIn(Dist.CLIENT)
-public class TextureLocation {
-    public static final ResourceLocation[] TEXTURE_CONCRETE = {
-            new ResourceLocation("textures/block/white_concrete.png"),
-            new ResourceLocation("textures/block/orange_concrete.png"),
-            new ResourceLocation("textures/block/magenta_concrete.png"),
-            new ResourceLocation("textures/block/light_blue_concrete.png"),
-            new ResourceLocation("textures/block/yellow_concrete.png"),
-            new ResourceLocation("textures/block/lime_concrete.png"),
-            new ResourceLocation("textures/block/pink_concrete.png"),
-            new ResourceLocation("textures/block/gray_concrete.png"),
-            new ResourceLocation("textures/block/light_gray_concrete.png"),
-            new ResourceLocation("textures/block/cyan_concrete.png"),
-            new ResourceLocation("textures/block/purple_concrete.png"),
-            new ResourceLocation("textures/block/blue_concrete.png"),
-            new ResourceLocation("textures/block/brown_concrete.png"),
-            new ResourceLocation("textures/block/green_concrete.png"),
-            new ResourceLocation("textures/block/red_concrete.png"),
-            new ResourceLocation("textures/block/black_concrete.png")
-    };
-    public static final ResourceLocation[] TEXTURE_CARPET = {
-            new ResourceLocation(AccessMod.MODID, "textures/entity/carpet_0.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/carpet_1.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/carpet_2.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/carpet_3.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/carpet_4.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/carpet_5.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/carpet_6.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/carpet_7.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/carpet_8.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/halloween_0.png"), // 9
-            new ResourceLocation(AccessMod.MODID, "textures/entity/halloween_1.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/halloween_2.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/halloween_3.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/halloween_4.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/ocean_0.png"), // 14
-            new ResourceLocation(AccessMod.MODID, "textures/entity/ocean_1.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/ocean_2.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/ocean_3.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/pillage_0.png"), // 18
-            new ResourceLocation(AccessMod.MODID, "textures/entity/pillage_1.png")
-    };
-    public static final ResourceLocation[] TEXTURE_SKULL = {
-            new ResourceLocation(AccessMod.MODID, "textures/entity/head_pumpkin.png"),
-            new ResourceLocation(AccessMod.MODID, "textures/entity/head_skeleton.png")
-    };
-    public static final ResourceLocation TEXTURE_HAY = new ResourceLocation("textures/block/hay_block_top.png");
-    public static final ResourceLocation TEXTURE_EFFECT = new ResourceLocation(AccessMod.MODID, "textures/entity/magicfield.png");
-    public static final ResourceLocation BARS = new ResourceLocation("textures/gui/bars.png");
+@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE, modid = AccessMod.MODID, value = Dist.CLIENT)
+public class ClientEventHandler {
+
+    @SubscribeEvent
+    public static void onRenderGui(RenderGameOverlayEvent.Post event) {
+        if (event.getType() == RenderGameOverlayEvent.ElementType.EXPERIENCE) {
+            Minecraft mc = Minecraft.getInstance();
+            if (Helper.isRidingFlyingThing(mc.player)) {
+                new GuiOverlayEnergy(mc, event.getMatrixStack());
+            }
+        }
+    }
 }

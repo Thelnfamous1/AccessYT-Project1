@@ -675,78 +675,84 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-package ovh.corrail.flyingthings.helper;
+package ovh.corail.flyingthings.gui;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraftforge.common.util.Constants;
+import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.systems.RenderSystem;
+import ovh.corail.flyingthings.carpet.EntityAbstractFlyingThing;
+import ovh.corail.flyingthings.config.ConfigFlyingThings;
+import ovh.corail.flyingthings.helper.Helper;
+import ovh.corail.flyingthings.helper.TextureLocation;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.player.ClientPlayerEntity;
+import net.minecraft.client.gui.AbstractGui;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
-public class NBTStackHelper {
+@OnlyIn(Dist.CLIENT)
+@SuppressWarnings("FieldCanBeLocal")
+public class GuiOverlayEnergy extends Screen {
+    public final int width, height, guiLeft, barLength;
 
-    public static ItemStack setBoolean(ItemStack stack, String keyName, boolean keyValue) {
-        stack.getOrCreateTag().putBoolean(keyName, keyValue);
-        return stack;
+    public GuiOverlayEnergy(Minecraft mc, MatrixStack matrixStack) {
+        super(new StringTextComponent("Flying Things Energy"));
+        this.minecraft = mc;
+        this.width = mc.getWindow().getGuiScaledWidth();
+        this.height = mc.getWindow().getGuiScaledHeight();
+        this.barLength = 182;
+        this.guiLeft = (this.width - this.barLength) / 2;
+        drawScreen(matrixStack);
     }
 
-    public static boolean getBoolean(ItemStack stack, String keyName) {
-        CompoundNBT tag = stack.getTag();
-        if (tag != null) {
-            if (tag.contains(keyName, Constants.NBT.TAG_BYTE)) {
-                return tag.getBoolean(keyName);
-            }
+    private void drawScreen(MatrixStack matrixStack) {
+        final ClientPlayerEntity player = Minecraft.getInstance().player;
+        if (Helper.isRidingFlyingThing(player)) {
+            EntityAbstractFlyingThing mount = ((EntityAbstractFlyingThing) player.getVehicle());
+            assert mount != null;
+            drawBars(this, matrixStack, this.guiLeft, this.height * ConfigFlyingThings.client.barHeightPos.get() / 100, this.barLength, mount.getEnergy(), mount.speed);
         }
-        return false;
     }
 
-    public static ItemStack setInteger(ItemStack stack, String keyName, int keyValue) {
-        stack.getOrCreateTag().putInt(keyName, keyValue);
-        return stack;
-    }
-
-    public static int getInteger(ItemStack stack, String keyName) {
-        return getInteger(stack, keyName, Integer.MIN_VALUE);
-    }
-
-    public static int getInteger(ItemStack stack, String keyName, int defaultValue) {
-        CompoundNBT tag = stack.getTag();
-        if (tag != null) {
-            if (tag.contains(keyName, Constants.NBT.TAG_INT)) {
-                return tag.getInt(keyName);
-            }
+    static void drawBars(Screen screen, MatrixStack matrixStack, int guiLeft, int guiTop, int barWidth, int energy, double mountSpeed) {
+        Minecraft mc = Minecraft.getInstance();
+        RenderSystem.enableBlend();
+        mc.getTextureManager().bind(TextureLocation.BARS);
+        int colorPosY = 60;
+        int filled = (int) (energy * barWidth / (double) ConfigFlyingThings.shared_datas.maxEnergy.get()) + 1;
+        float[] colors = Helper.getRGBColor3F(ConfigFlyingThings.client.barColorEnergy.get());
+        RenderSystem.color4f(colors[0], colors[1], colors[2], 0.5f);
+        screen.blit(matrixStack, guiLeft, guiTop, 0, colorPosY, barWidth, 5);
+        if (filled > 0) {
+            RenderSystem.color4f(colors[0], colors[1], colors[2], 1f);
+            screen.blit(matrixStack,guiLeft, guiTop, 0, colorPosY + 5, filled, 5);
         }
-        return defaultValue;
-    }
+        RenderSystem.color4f(1f, 1f, 1f, 1f);
+        screen.blit(matrixStack,guiLeft, guiTop, 0, ConfigFlyingThings.client.barGraduationEnergy.get().ordinal() * 10 + 80, barWidth, 5);
 
-    public static ItemStack setString(ItemStack stack, String keyName, String keyValue) {
-        stack.getOrCreateTag().putString(keyName, keyValue);
-        return stack;
-    }
-
-    public static String getString(ItemStack stack, String keyName) {
-        CompoundNBT tag = stack.getTag();
-        if (tag != null) {
-            if (tag.contains(keyName, Constants.NBT.TAG_STRING)) {
-                return tag.getString(keyName);
-            }
+        float speed = (float) mountSpeed * 100f;
+        float speedMax = (float) ConfigFlyingThings.shared_datas.speedMax.get();
+        if (mountSpeed >= speedMax) {
+            filled = barWidth + 1;
+        } else {
+            filled = (int) (speed * barWidth / speedMax) + 1;
         }
-        return "";
-    }
-
-    public static boolean hasKeyName(ItemStack stack, String keyName) {
-        CompoundNBT tag = stack.getTag();
-        return tag != null && tag.contains(keyName);
-    }
-
-    public static boolean removeKeyName(ItemStack stack, String keyName) {
-        CompoundNBT tag = stack.getTag();
-        boolean removed = false;
-        if (tag != null && tag.contains(keyName)) {
-            removed = true;
-            tag.remove(keyName);
-            if (tag.isEmpty()) {
-                stack.setTag(null);
-            }
+        colors = Helper.getRGBColor3F(ConfigFlyingThings.client.barColorSpeed.get());
+        RenderSystem.color4f(colors[0], colors[1], colors[2], 0.5f);
+        screen.blit(matrixStack,guiLeft, guiTop + 7, 0, colorPosY, barWidth, 5);
+        if (filled > 0) {
+            RenderSystem.color4f(colors[0], colors[1], colors[2], 1f);
+            screen.blit(matrixStack,guiLeft, guiTop + 7, 0, colorPosY + 5, filled, 5);
         }
-        return removed;
+        RenderSystem.color4f(1f, 1f, 1f, 1f);
+        screen.blit(matrixStack,guiLeft, guiTop + 7, 0, ConfigFlyingThings.client.barGraduationSpeed.get().ordinal() * 10 + 80, barWidth, 5);
+        if (ConfigFlyingThings.client.barValue.get()) {
+            fill(matrixStack,guiLeft, guiTop + 14, guiLeft + 130, guiTop + 40, 0x20000000);
+            AbstractGui.drawString(matrixStack, mc.font, "Speed : " + MathHelper.floor(Math.min(mountSpeed * 100d, ConfigFlyingThings.shared_datas.speedMax.get())) + " / " + ConfigFlyingThings.shared_datas.speedMax.get(), guiLeft + 10, guiTop + 18, 0xa0ffffff);
+            AbstractGui.drawString(matrixStack, mc.font, "Energy : " + energy + " / " + ConfigFlyingThings.shared_datas.maxEnergy.get(), guiLeft + 10, guiTop + 28, 0xa0ffffff);
+        }
+        RenderSystem.defaultBlendFunc();
     }
 }

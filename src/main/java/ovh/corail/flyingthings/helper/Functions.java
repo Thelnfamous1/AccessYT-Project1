@@ -675,27 +675,55 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-package ovh.corrail.flyingthings.event;
+package ovh.corail.flyingthings.helper;
 
-import me.infamous.accessmod.AccessMod;
-import ovh.corrail.flyingthings.gui.GuiOverlayEnergy;
-import ovh.corrail.flyingthings.helper.Helper;
-import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.IVertexBuilder;
+import net.minecraft.client.renderer.IRenderTypeBuffer;
+import net.minecraft.client.renderer.RenderState;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.Util;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGameOverlayEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
-@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE, modid = AccessMod.MODID, value = Dist.CLIENT)
-public class ClientEventHandler {
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
-    @SubscribeEvent
-    public static void onRenderGui(RenderGameOverlayEvent.Post event) {
-        if (event.getType() == RenderGameOverlayEvent.ElementType.EXPERIENCE) {
-            Minecraft mc = Minecraft.getInstance();
-            if (Helper.isRidingFlyingThing(mc.player)) {
-                new GuiOverlayEnergy(mc, event.getMatrixStack());
-            }
-        }
+@OnlyIn(Dist.CLIENT)
+public class Functions {
+    private static final Function<ResourceLocation, RenderType> FLYING_THINGS_GLINT = rl -> RenderType.create("flying_things_glint", DefaultVertexFormats.POSITION_COLOR_TEX_LIGHTMAP, 7, 256, RenderType.State.builder().setTextureState(new RenderState.TextureState(rl, true, false)).setWriteMaskState(new RenderState.WriteMaskState(true, false)).setDepthTestState(new RenderState.DepthTestState("==", 514)).setTransparencyState(new RenderState.TransparencyState("glint_transparency", () -> {
+        RenderSystem.enableBlend();
+        RenderSystem.blendFunc(GlStateManager.SourceFactor.DST_COLOR, GlStateManager.DestFactor.ONE);
+        RenderSystem.enableCull();
+    }, () -> {
+        RenderSystem.disableCull();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableBlend();
+    })).setTexturingState(new RenderState.TexturingState("glint_texturing", () -> {
+        setupGlintTexturing(1f);
+    }, () -> {
+        RenderSystem.matrixMode(5890);
+        RenderSystem.popMatrix();
+        RenderSystem.matrixMode(5888);
+    })).createCompositeState(false));
+
+    private static void setupGlintTexturing(float scaleIn) {
+        RenderSystem.matrixMode(5890);
+        RenderSystem.pushMatrix();
+        RenderSystem.loadIdentity();
+        long i = Util.getMillis() * 8L;
+        float f = (float)(i % 110000L) / 110000f;
+        float f1 = (float)(i % 30000L) / 30000f;
+        RenderSystem.translatef(-f, f1, 0f);
+        RenderSystem.rotatef(10f, 0f, 0f, 1f);
+        RenderSystem.scalef(scaleIn, scaleIn, scaleIn);
+        RenderSystem.matrixMode(5888);
     }
+
+    public static final BiFunction<IRenderTypeBuffer, ResourceLocation, IVertexBuilder> VERTEX_BUILDER_CUTOUT = (iRenderTypeBuffer, rl) -> iRenderTypeBuffer.getBuffer(RenderType.entityCutout(rl));
+    private static final BiFunction<IRenderTypeBuffer, ResourceLocation, IVertexBuilder> VERTEX_BUILDER_GLINTER = (iRenderTypeBuffer, rl) -> iRenderTypeBuffer.getBuffer(FLYING_THINGS_GLINT.apply(rl));
+    public static final Function<IRenderTypeBuffer, IVertexBuilder> VERTEX_BUILDER_GLINT = iRenderTypeBuffer -> VERTEX_BUILDER_GLINTER.apply(iRenderTypeBuffer, TextureLocation.TEXTURE_EFFECT);
 }

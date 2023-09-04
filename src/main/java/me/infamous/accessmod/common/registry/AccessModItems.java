@@ -1,7 +1,7 @@
 package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
-import ovh.corrail.flyingthings.item.ItemMagicCarpet;
+import ovh.corail.flyingthings.item.ItemMagicCarpet;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraftforge.common.ForgeSpawnEggItem;
