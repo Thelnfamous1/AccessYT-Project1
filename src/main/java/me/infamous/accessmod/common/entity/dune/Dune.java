@@ -110,7 +110,7 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
         this.goalSelector.addGoal(1, new BuriedGoal<>(this));
         this.goalSelector.addGoal(2, new UsingMagicGoal<>(this));
         this.goalSelector.addGoal(3, new ConditionalGoal<>(Dune::canUseDrag, this, new DuneDragGoal(this), true));
-        this.goalSelector.addGoal(4, new ConditionalGoal<>(Dune::canUseRanged, this, new DuneRangedGoal(this), true));
+        this.goalSelector.addGoal(4, new ConditionalGoal<>(Dune::canUseRanged, this, new DuneRangedGoal(this), false));
         this.goalSelector.addGoal(5, new ConditionalGoal<>(Dune::canUseMelee, this, new AnimatableMeleeAttackGoal<>(this, 1.0D, false), true));
         this.goalSelector.addGoal(6, new AttackTurtleEggGoal(this, 1.0D, 3));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
@@ -333,8 +333,12 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
             switch (this.getCurrentMagicType()){
                 case RANGED:
                     event.getController().setAnimation(RANGED_ANIM);
+                    break;
                 case DRAG:
                     event.getController().setAnimation(DRAG_ANIM);
+                    break;
+                default: // do nothing
+                    break;
             }
         } else if(this.isAttackAnimationInProgress()){
             event.getController().setAnimation(MELEE_ANIM);
