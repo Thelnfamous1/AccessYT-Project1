@@ -4,6 +4,7 @@ import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.common.entity.dune.Dune;
 import me.infamous.accessmod.common.network.AccessModNetwork;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
+import me.infamous.accessmod.common.registry.AccessModLootFunctions;
 import net.minecraft.entity.EntitySpawnPlacementRegistry;
 import net.minecraft.world.gen.Heightmap;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
@@ -28,6 +29,7 @@ public class ModEventHandler {
                     EntitySpawnPlacementRegistry.PlacementType.ON_GROUND,
                     Heightmap.Type.MOTION_BLOCKING_NO_LEAVES,
                     Dune::checkDuneSpawnRules);
+            AccessModLootFunctions.register();
         });
     }
 }

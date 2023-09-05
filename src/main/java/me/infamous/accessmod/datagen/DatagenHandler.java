@@ -1,6 +1,7 @@
 package me.infamous.accessmod.datagen;
 
 import me.infamous.accessmod.AccessMod;
+import me.infamous.accessmod.common.registry.AccessModLootFunctions;
 import net.minecraft.data.DataGenerator;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -12,6 +13,8 @@ public class DatagenHandler {
 
     @SubscribeEvent
     static void gatherDataEvent(GatherDataEvent event){
+        AccessModLootFunctions.register();
+
         boolean includeClient = event.includeClient();
         boolean includeServer = event.includeServer();
         DataGenerator generator = event.getGenerator();
@@ -20,6 +23,7 @@ public class DatagenHandler {
         AccessModItemModelProvider itemModelProvider = new AccessModItemModelProvider(generator, existingFileHelper);
         AccessModBlockTagsProvider blockTagsProvider = new AccessModBlockTagsProvider(generator, existingFileHelper);
         AccessModEntityTypeTagsProvider entityTypeTagsProvider = new AccessModEntityTypeTagsProvider(generator, existingFileHelper);
+        AccessModLootTablesProvider lootTablesProvider = new AccessModLootTablesProvider(generator);
         if(includeClient){
             generator.addProvider(languageProvider);
             generator.addProvider(itemModelProvider);
@@ -27,6 +31,7 @@ public class DatagenHandler {
         if(includeServer){
             generator.addProvider(blockTagsProvider);
             generator.addProvider(entityTypeTagsProvider);
+            generator.addProvider(lootTablesProvider);
         }
     }
 }

@@ -60,7 +60,7 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     public static final int ATTACK_ANIMATION_LENGTH = 18;
     public static final int ATTACK_ANIMATION_ACTION_POINT = 16;
     public static final int DIG_ANIMATION_LENGTH = 38;
-    public static final int BASE_WRATH_DURATION = 140;
+    public static final int BASE_WRATH_DURATION = 100;
     public static final int PREFERRED_RANGED_DISTANCE = 8;
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
     protected static final AnimationBuilder IDLE_ANIM = new AnimationBuilder().addAnimation("idle", true);
@@ -81,6 +81,7 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
 
     public Dune(EntityType<? extends Dune> entityType, World world) {
         super(entityType, world);
+        this.xpReward = 20;
     }
 
     public static AttributeModifierMap.MutableAttribute createAttributes() {
@@ -88,7 +89,8 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
                 .add(Attributes.FOLLOW_RANGE, 16.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.35F)
                 .add(Attributes.MAX_HEALTH, 100.0D)
-                .add(Attributes.ATTACK_DAMAGE, 15.0D);
+                .add(Attributes.ATTACK_DAMAGE, 15.0D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D);
     }
 
     public static boolean checkDuneSpawnRules(EntityType<Dune> type, IServerWorld world, SpawnReason spawnReason, BlockPos blockPos, Random random) {

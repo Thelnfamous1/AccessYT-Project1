@@ -12,6 +12,8 @@ import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 
+import java.util.stream.Collectors;
+
 public class AccessModEntityTypes {
 
     private static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.ENTITIES, AccessMod.MODID);
@@ -23,7 +25,7 @@ public class AccessModEntityTypes {
 
     public static final RegistryObject<EntityType<WrathfulDust>> WRATHFUL_DUST = register("wrathful_dust",
             EntityType.Builder.<WrathfulDust>of(WrathfulDust::new, EntityClassification.MISC)
-                    .sized(0.25F, 0.25F)
+                    .sized(1.0F, 1.0F)
                     .clientTrackingRange(4)
                     .updateInterval(10));
 
@@ -43,5 +45,9 @@ public class AccessModEntityTypes {
 
     public static void register(IEventBus modEventBus){
         ENTITY_TYPES.register(modEventBus);
+    }
+
+    public static Iterable<EntityType<?>> getKnownEntities() {
+        return ENTITY_TYPES.getEntries().stream().map(RegistryObject::get).collect(Collectors.toSet());
     }
 }

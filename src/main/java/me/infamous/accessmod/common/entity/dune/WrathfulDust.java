@@ -4,7 +4,7 @@ import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.projectile.ProjectileItemEntity;
+import net.minecraft.entity.projectile.AbstractFireballEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -20,7 +20,7 @@ import net.minecraft.world.World;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import net.minecraftforge.fml.network.NetworkHooks;
 
-public class WrathfulDust extends ProjectileItemEntity implements IEntityAdditionalSpawnData {
+public class WrathfulDust extends AbstractFireballEntity implements IEntityAdditionalSpawnData {
 
     private static final byte HIT_EVENT_ID = (byte) 3;
 
@@ -28,12 +28,17 @@ public class WrathfulDust extends ProjectileItemEntity implements IEntityAdditio
         super(type, world);
     }
 
-    public WrathfulDust(World world, LivingEntity owner) {
-        super(AccessModEntityTypes.WRATHFUL_DUST.get(), owner, world);
+    public WrathfulDust(World world, LivingEntity owner, double xPower, double yPower, double zPower) {
+        super(AccessModEntityTypes.WRATHFUL_DUST.get(), owner, xPower, yPower, zPower, world);
     }
 
     @Override
-    public Item getDefaultItem() {
+    public ItemStack getItem() {
+        ItemStack itemRaw = this.getItemRaw();
+        return itemRaw.isEmpty() ? new ItemStack(this.getDefaultItem()) : itemRaw;
+    }
+
+    protected Item getDefaultItem() {
         return Items.SAND;
     }
 
@@ -42,6 +47,16 @@ public class WrathfulDust extends ProjectileItemEntity implements IEntityAdditio
         return itemRaw.isEmpty() ?
                 new ItemParticleData(ParticleTypes.ITEM, this.getDefaultItem().getDefaultInstance()) :
                 new ItemParticleData(ParticleTypes.ITEM, itemRaw);
+    }
+
+    @Override
+    protected boolean shouldBurn() {
+        return false;
+    }
+
+    @Override
+    protected IParticleData getTrailParticle() {
+        return this.getParticle();
     }
 
     @Override
@@ -90,11 +105,17 @@ public class WrathfulDust extends ProjectileItemEntity implements IEntityAdditio
         Entity entity = this.getOwner();
         int ownerId = entity == null ? 0 : entity.getId();
         buffer.writeInt(ownerId);
+        buffer.writeDouble(this.xPower);
+        buffer.writeDouble(this.yPower);
+        buffer.writeDouble(this.zPower);
     }
     @Override
     public void readSpawnData(PacketBuffer additionalData) {
         int ownerId = additionalData.readInt();
         Entity owner = this.level.getEntity(ownerId);
         if(owner != null) this.setOwner(owner);
+        this.xPower = additionalData.readDouble();
+        this.yPower = additionalData.readDouble();
+        this.zPower = additionalData.readDouble();
     }
 }

@@ -844,9 +844,9 @@ public class ConfigFlyingThings {
                     .translation(getTranslation("speed_max_no_energy"))
                     .defineInRange("speed_max_no_energy", 30, 0, 300);
             maxEnergy = builder
-                    .comment("Maximum energy [100..MAX|default:1000]")
+                    .comment("Maximum energy [100..MAX|default:120]") // default lowered by Access' specifications
                     .translation(getTranslation("max_energy"))
-                    .defineInRange("max_energy", 1000, 100, Integer.MAX_VALUE);
+                    .defineInRange("max_energy", 120, 100, Integer.MAX_VALUE);
             allowTombstoneSoulbound = builder
                     .comment("Allow applying Soulbound [false/true|default:true]")
                     .translation(getTranslation("allow_tombstone_soulbound"))

@@ -8,7 +8,7 @@ import javax.annotation.Nullable;
 
 public enum DuneMagicType implements AnimatableMagic.MagicType {
     NONE(0, 0, 0, 0, null),
-    RANGED(1, 15, 21, 100, SoundEvents.ILLUSIONER_PREPARE_BLINDNESS),
+    RANGED(1, 15, 21, 20, SoundEvents.ILLUSIONER_PREPARE_BLINDNESS),
     DRAG(2, 15, 28, 200, SoundEvents.EVOKER_PREPARE_ATTACK);
 
     private final int id;

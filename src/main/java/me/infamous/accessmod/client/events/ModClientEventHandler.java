@@ -19,7 +19,7 @@ public class ModClientEventHandler {
     public static void onClientSetup(FMLClientSetupEvent event) {
         RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.DUNE.get(), DuneRenderer::new);
         RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.WRATHFUL_DUST.get(),
-                manager -> new SpriteRenderer<>(manager, Minecraft.getInstance().getItemRenderer()));
+                manager -> new SpriteRenderer<>(manager, Minecraft.getInstance().getItemRenderer(), 3.0F, true));
 
         RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.MAGIC_CARPET.get(), RenderMagicCarpet::new);
     }
