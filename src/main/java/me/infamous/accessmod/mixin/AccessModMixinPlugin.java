@@ -1,6 +1,6 @@
 package me.infamous.accessmod.mixin;
 
-import com.llamalad7.mixinextras.MixinExtrasBootstrap;
+//import com.llamalad7.mixinextras.MixinExtrasBootstrap;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -12,7 +12,7 @@ public class AccessModMixinPlugin implements IMixinConfigPlugin {
     
     @Override
     public void onLoad(String mixinPackage) {
-        MixinExtrasBootstrap.init();
+        //MixinExtrasBootstrap.init();
     }
     
     @Override

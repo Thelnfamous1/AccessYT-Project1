@@ -1,6 +1,6 @@
 package me.infamous.accessmod.mixin;
 
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+//import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import me.infamous.accessmod.duck.DuneSinker;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -17,6 +17,7 @@ public abstract class LivingEntityMixin extends Entity implements DuneSinker {
         super(type, world);
     }
 
+    /*
     @ModifyExpressionValue(method = "baseTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;isEyeInFluid(Lnet/minecraft/tags/ITag;)Z"))
     private boolean baseTick$checkDrown(boolean original) {
         return original || this.isSunkByDune();
@@ -26,4 +27,5 @@ public abstract class LivingEntityMixin extends Entity implements DuneSinker {
     private DamageSource baseTick$modifyDrownDamageSource(DamageSource original) {
         return this.isSunkByDune() ? DuneSinker.SUFFOCATION : original;
     }
+     */
 }

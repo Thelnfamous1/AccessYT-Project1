@@ -1,6 +1,6 @@
 package me.infamous.accessmod.mixin;
 
-import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+//import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import me.infamous.accessmod.datagen.AccessModTags;
 import me.infamous.accessmod.duck.DuneSinker;
 import net.minecraft.block.BlockState;
@@ -56,6 +56,7 @@ public abstract class EntityMixin implements DuneSinker {
                 .is(AccessModTags.DUNE_WRATH_SINK_IN);
     }
 
+    /*
     @ModifyExpressionValue(method = "move", at = @At(value = "INVOKE", target = "Lnet/minecraft/block/Block;is(Lnet/minecraft/tags/ITag;)Z"))
     private boolean move$checkOnDuneWrathSinkIn(boolean original) {
         if (original) return true;
@@ -65,4 +66,5 @@ public abstract class EntityMixin implements DuneSinker {
         BlockState onState = this.level.getBlockState(onPos);
         return onState.is(AccessModTags.DUNE_WRATH_SINK_IN);
     }
+     */
 }

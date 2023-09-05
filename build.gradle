@@ -158,7 +158,7 @@ repositories {
     maven { url 'https://jitpack.io' }
 }
 
-jarJar.enable()
+//jarJar.enable()
 
 mixin {
     add sourceSets.main, "${mod_id}.refmap.json"
@@ -177,9 +177,9 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
     // MixinExtras
-    minecraftLibrary group: "com.github.LlamaLad7", name:"MixinExtras", version: "${mixin_extras_version}"
-    annotationProcessor("com.github.LlamaLad7:MixinExtras:${mixin_extras_version}")
-    jarJar(group: "com.github.LlamaLad7", name:"MixinExtras", version: "[${mixin_extras_version},${mixin_extras_next_version})")
+    //minecraftLibrary group: "com.github.LlamaLad7", name:"MixinExtras", version: "${mixin_extras_version}"
+    //annotationProcessor("com.github.LlamaLad7:MixinExtras:${mixin_extras_version}")
+    //jarJar(group: "com.github.LlamaLad7", name:"MixinExtras", version: "[${mixin_extras_version},${mixin_extras_next_version})")
 
 
     // Mixin annotation processor - generates the refmap
