@@ -16,8 +16,10 @@ public class AccessModNetwork {
             PROTOCOL_VERSION::equals,
             PROTOCOL_VERSION::equals
     );
+    private static int INDEX = 0;
 
     public static void init() {
-        SYNC_CHANNEL.registerMessage(0, ClientboundDuneSinkPacket.class, ClientboundDuneSinkPacket::encode, ClientboundDuneSinkPacket::new, ClientboundDuneSinkPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        SYNC_CHANNEL.registerMessage(INDEX++, ClientboundDuneSinkPacket.class, ClientboundDuneSinkPacket::encode, ClientboundDuneSinkPacket::new, ClientboundDuneSinkPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        SYNC_CHANNEL.registerMessage(INDEX++, ServerboundDuneJumpPacket.class, ServerboundDuneJumpPacket::encode, ServerboundDuneJumpPacket::new, ServerboundDuneJumpPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 }

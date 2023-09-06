@@ -1,9 +1,7 @@
 package me.infamous.accessmod.mixin;
 
 //import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import me.infamous.accessmod.datagen.AccessModTags;
 import me.infamous.accessmod.duck.DuneSinker;
-import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -24,36 +22,43 @@ public abstract class EntityMixin implements DuneSinker {
     @Shadow protected abstract BlockPos getOnPos();
 
     @Shadow public World level;
+
     @Unique
-    private boolean sunkByDune;
+    private boolean wasSinking;
     @Unique
-    private int sinkTimer;
+    private boolean sinking;
+    @Unique
+    private int canSinkTimer;
 
     @Unique
     @Override
-    public int getSinkTimer() {
-        return this.sinkTimer;
+    public int getCanSinkTimer() {
+        return this.canSinkTimer;
     }
 
     @Unique
     @Override
-    public void setSinkTimer(int sinkTimer) {
-        this.sinkTimer = sinkTimer;
+    public void setCanSinkTimer(int canSinkTimer) {
+        this.canSinkTimer = canSinkTimer;
     }
 
     @Unique
     @Override
-    public boolean isSunkByDune() {
-        return this.sunkByDune;
+    public boolean isSinking() {
+        return this.wasSinking || this.sinking;
+    }
+
+    @Unique
+    @Override
+    public void setIsSinking(boolean sinking) {
+        this.sinking = sinking;
     }
 
     @Inject(method = "baseTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/Entity;updateFluidOnEyes()V"))
     private void baseTick$updateSunkByDune(CallbackInfo ci) {
-        if(this.sinkTimer > 0) this.sinkTimer--;
-        this.sunkByDune = this.sinkTimer > 0
-                && this.level
-                .getBlockState(new BlockPos(this.blockPosition().getX(), this.getEyeY() - 0.11111111F, this.blockPosition().getZ()))
-                .is(AccessModTags.DUNE_WRATH_SINK_IN);
+        if(this.canSinkTimer > 0) this.canSinkTimer--;
+        this.wasSinking = this.sinking;
+        this.sinking = false;
     }
 
     /*

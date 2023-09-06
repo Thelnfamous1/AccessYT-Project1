@@ -32,7 +32,7 @@ public class ClientboundDuneSinkPacket {
         context.get().enqueueWork(() -> {
             Entity entity = Minecraft.getInstance().level.getEntity(packet.id);
             if(entity != null){
-                ((DuneSinker)entity).setSinkTimer(packet.sinkTimer);
+                ((DuneSinker)entity).setCanSinkTimer(packet.sinkTimer);
             }
         });
         context.get().setPacketHandled(true);

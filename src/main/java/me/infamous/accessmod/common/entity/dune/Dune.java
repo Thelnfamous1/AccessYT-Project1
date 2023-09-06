@@ -77,7 +77,7 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     private int attackAnimationTick;
     private int magicUseTicks;
     private DuneMagicType currentMagicType;
-    private final MagicCooldownTracker magicCooldowns = new MagicCooldownTracker();
+    private final MagicCooldownTracker<Dune, DuneMagicType> magicCooldowns = new MagicCooldownTracker<>(this);
 
     public Dune(EntityType<? extends Dune> entityType, World world) {
         super(entityType, world);
@@ -87,7 +87,7 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     public static AttributeModifierMap.MutableAttribute createAttributes() {
         return MonsterEntity.createMonsterAttributes()
                 .add(Attributes.FOLLOW_RANGE, 16.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.35F)
+                .add(Attributes.MOVEMENT_SPEED, 0.25F)
                 .add(Attributes.MAX_HEALTH, 100.0D)
                 .add(Attributes.ATTACK_DAMAGE, 15.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D);
@@ -490,8 +490,7 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     }
 
     @Override
-    public MagicCooldownTracker getMagicCooldowns() {
+    public MagicCooldownTracker<Dune, DuneMagicType> getMagicCooldowns() {
         return this.magicCooldowns;
     }
-
 }

@@ -1,5 +1,7 @@
 package me.infamous.accessmod.common.entity.ai.magic;
 
+import net.minecraft.entity.MobEntity;
+import net.minecraft.util.RangedInteger;
 import net.minecraft.util.SoundEvent;
 
 import javax.annotation.Nullable;
@@ -30,7 +32,7 @@ public interface AnimatableMagic<M extends AnimatableMagic.MagicType> {
         this.setCurrentMagicType(this.getDefaultMagicType());
     }
 
-    MagicCooldownTracker getMagicCooldowns();
+    MagicCooldownTracker<?, M> getMagicCooldowns();
 
     interface MagicType{
 
@@ -40,7 +42,7 @@ public interface AnimatableMagic<M extends AnimatableMagic.MagicType> {
 
         int getCastingTime();
 
-        int getCooldownTime();
+        RangedInteger getCooldownTime();
 
         @Nullable
         SoundEvent getPrepareSound();

@@ -42,9 +42,8 @@ public interface DuneSinker {
                             MathHelper.nextFloat(random, -1.0F, 1.0F) * 0.083333336F, 0.05F, MathHelper.nextFloat(random, -1.0F, 1.0F) * 0.083333336F);
                 }
             }
+            ((DuneSinker)entity).setIsSinking(true);
         }
-
-        //entity.setIsInPowderSnow(true);
     }
 
     static void getCollisionShape(BlockState blockState, ISelectionContext pContext, CallbackInfoReturnable<VoxelShape> cir) {
@@ -65,20 +64,22 @@ public interface DuneSinker {
     }
 
     static void sink(Entity target, int sinkTimer){
-        ((DuneSinker)target).setSinkTimer(sinkTimer);
+        ((DuneSinker)target).setCanSinkTimer(sinkTimer);
         if(!target.level.isClientSide){
             AccessModNetwork.SYNC_CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> target), new ClientboundDuneSinkPacket(target, sinkTimer));
         }
     }
 
     static boolean canSink(Entity entity){
-        return ((DuneSinker)entity).getSinkTimer() > 0;
+        return ((DuneSinker)entity).getCanSinkTimer() > 0;
     }
 
-    int getSinkTimer();
+    int getCanSinkTimer();
 
-    void setSinkTimer(int sinkTimer);
+    void setCanSinkTimer(int canSinkTimer);
 
-    boolean isSunkByDune();
+    boolean isSinking();
+
+    void setIsSinking(boolean sinking);
 
 }
