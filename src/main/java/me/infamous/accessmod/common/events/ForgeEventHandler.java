@@ -37,7 +37,6 @@ public class ForgeEventHandler {
     @SubscribeEvent
     static void onItemUseFinish(LivingEntityUseItemEvent.Finish event){
         if(AccessModUtil.isFromDesertWell(event.getItem())){
-            AccessMod.LOGGER.info("Drank a water bottle filled from a desert well!");
             if(!event.getEntityLiving().level.isClientSide){
                 AccessModUtil.summonDune(event.getEntityLiving(), (ServerWorld) event.getEntityLiving().level);
             }
