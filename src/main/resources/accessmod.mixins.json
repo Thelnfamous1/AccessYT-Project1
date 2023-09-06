@@ -8,6 +8,7 @@
     "AbstractBlockStateMixin",
     "DesertWellsFeatureMixin",
     "EntityMixin",
+    "GlassBottleItemMixin",
     "LivingEntityMixin"
   ],
   "client": [],

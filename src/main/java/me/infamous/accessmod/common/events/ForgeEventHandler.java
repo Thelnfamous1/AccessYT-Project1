@@ -4,17 +4,11 @@ import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.common.AccessModUtil;
 import me.infamous.accessmod.common.network.AccessModNetwork;
 import me.infamous.accessmod.common.network.ServerboundDuneJumpPacket;
-import me.infamous.accessmod.common.registry.AccessModPOITypes;
 import me.infamous.accessmod.duck.DuneSinker;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
-import net.minecraft.item.GlassBottleItem;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.BlockRayTraceResult;
-import net.minecraft.util.math.RayTraceContext;
-import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
@@ -41,16 +35,11 @@ public class ForgeEventHandler {
     }
 
     @SubscribeEvent
-    static void rightClickBlock(PlayerInteractEvent.RightClickItem event){
-        if(!event.getWorld().isClientSide && event.getItemStack().getItem() instanceof GlassBottleItem){
-            ServerWorld serverWorld = (ServerWorld) event.getWorld();
-            BlockRayTraceResult playerPOVHitResult = AccessModUtil.getPlayerPOVHitResult(event.getWorld(), event.getPlayer(), RayTraceContext.FluidMode.SOURCE_ONLY);
-            if(playerPOVHitResult.getType() == RayTraceResult.Type.BLOCK){
-                BlockPos blockPos = playerPOVHitResult.getBlockPos();
-                AccessMod.LOGGER.info("BlockState at position: {}", serverWorld.getBlockState(blockPos));
-                if(serverWorld.getPoiManager().existsAtPosition(AccessModPOITypes.DESERT_WELL.get(), blockPos)){
-                    AccessMod.LOGGER.info("Taking water out of a desert well at {}", blockPos);
-                }
+    static void onItemUseFinish(LivingEntityUseItemEvent.Finish event){
+        if(AccessModUtil.isFromDesertWell(event.getItem())){
+            AccessMod.LOGGER.info("Drank a water bottle filled from a desert well!");
+            if(!event.getEntityLiving().level.isClientSide){
+                AccessModUtil.summonDune(event.getEntityLiving(), (ServerWorld) event.getEntityLiving().level);
             }
         }
     }
