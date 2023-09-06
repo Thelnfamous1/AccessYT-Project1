@@ -6,6 +6,7 @@
   "refmap": "${mod_id}.refmap.json",
   "mixins": [
     "AbstractBlockStateMixin",
+    "DesertWellsFeatureMixin",
     "EntityMixin",
     "LivingEntityMixin"
   ],

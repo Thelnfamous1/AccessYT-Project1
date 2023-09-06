@@ -1,9 +1,6 @@
 package me.infamous.accessmod;
 
-import me.infamous.accessmod.common.registry.AccessModDataSerializers;
-import me.infamous.accessmod.common.registry.AccessModEffects;
-import me.infamous.accessmod.common.registry.AccessModEntityTypes;
-import me.infamous.accessmod.common.registry.AccessModItems;
+import me.infamous.accessmod.common.registry.*;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -30,6 +27,7 @@ public class AccessMod {
         AccessModItems.register(modEventBus);
         AccessModDataSerializers.register(modEventBus);
         AccessModEffects.register(modEventBus);
+        AccessModPOITypes.register(modEventBus);
 
         ModLoadingContext context = ModLoadingContext.get();
         Path modDirectory = FileUtils.getOrCreateDirectory(FMLPaths.CONFIGDIR.get().resolve(MODID), MODID);
