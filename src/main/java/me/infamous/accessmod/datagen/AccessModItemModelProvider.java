@@ -17,6 +17,7 @@ public class AccessModItemModelProvider extends ItemModelProvider {
     @Override
     protected void registerModels() {
         this.spawnEgg(AccessModItems.DUNE_SPAWN_EGG);
+        this.spawnEgg(AccessModItems.LURKER_SPAWN_EGG);
         /*
         ResourceLocation id = AccessYTItems.MAGIC_CARPET.getId();
         this.singleTexture(id.getPath(), mcLoc("item/generated"), new ResourceLocation(id.getNamespace(), "item/" + id.getPath()));

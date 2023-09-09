@@ -1,38 +1,38 @@
-package me.infamous.accessmod.client.renderer;
+package me.infamous.accessmod.client.renderer.lurker;
 
 import me.infamous.accessmod.AccessMod;
-import me.infamous.accessmod.common.entity.dune.Dune;
+import me.infamous.accessmod.common.entity.lurker.Lurker;
 import net.minecraft.util.ResourceLocation;
 import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
 import software.bernie.geckolib3.core.processor.IBone;
 import software.bernie.geckolib3.model.AnimatedGeoModel;
 import software.bernie.geckolib3.model.provider.data.EntityModelData;
 
-public class DuneModel extends AnimatedGeoModel<Dune> {
+public class LurkerModel extends AnimatedGeoModel<Lurker> {
 
-    public static final ResourceLocation ANIMATION_LOCATION = new ResourceLocation(AccessMod.MODID, "animations/dune.animation.json");
-    public static final ResourceLocation MODEL_LOCATION = new ResourceLocation(AccessMod.MODID, "geo/dune.geo.json");
-    public static final ResourceLocation TEXTURE_LOCATION = new ResourceLocation(AccessMod.MODID, "textures/entity/dune/dune.png");
+    public static final ResourceLocation ANIMATION_LOCATION = new ResourceLocation(AccessMod.MODID, "animations/lurker.animation.json");
+    public static final ResourceLocation MODEL_LOCATION = new ResourceLocation(AccessMod.MODID, "geo/lurker.geo.json");
+    public static final ResourceLocation TEXTURE_LOCATION = new ResourceLocation(AccessMod.MODID, "textures/entity/lurker/lurker.png");
 
     @Override
-    public ResourceLocation getAnimationFileLocation(Dune animatable) {
+    public ResourceLocation getAnimationFileLocation(Lurker animatable) {
         return ANIMATION_LOCATION;
     }
 
     @Override
-    public ResourceLocation getModelLocation(Dune object) {
+    public ResourceLocation getModelLocation(Lurker object) {
         return MODEL_LOCATION;
     }
 
     @Override
-    public ResourceLocation getTextureLocation(Dune object) {
+    public ResourceLocation getTextureLocation(Lurker object) {
         return TEXTURE_LOCATION;
     }
 
     @Override
-    public void setLivingAnimations(Dune entity, Integer uniqueID, AnimationEvent event) {
+    public void setLivingAnimations(Lurker entity, Integer uniqueID, AnimationEvent event) {
         super.setLivingAnimations(entity, uniqueID, event);
-        IBone head = this.getAnimationProcessor().getBone("Head");
+        IBone head = this.getAnimationProcessor().getBone("head");
 
         EntityModelData extraData = (EntityModelData) event.getExtraDataOfType(EntityModelData.class).get(0);
         if (extraData.headPitch != 0 || extraData.netHeadYaw != 0) {

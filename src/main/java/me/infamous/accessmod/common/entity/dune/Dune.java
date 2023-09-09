@@ -58,7 +58,7 @@ import java.util.Random;
 
 public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeAttack, IEntityAdditionalSpawnData, Digger, AnimatableMagic<DuneMagicType> {
     public static final int ATTACK_ANIMATION_LENGTH = 18;
-    public static final int ATTACK_ANIMATION_ACTION_POINT = 16;
+    public static final int ATTACK_ANIMATION_ACTION_POINT = 2;
     public static final int DIG_ANIMATION_LENGTH = 38;
     public static final int BASE_WRATH_DURATION = 100;
     public static final int PREFERRED_RANGED_DISTANCE = 8;

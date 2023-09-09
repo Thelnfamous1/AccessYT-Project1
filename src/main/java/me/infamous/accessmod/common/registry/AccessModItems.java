@@ -20,6 +20,10 @@ public class AccessModItems {
 
     public static final RegistryObject<Item> MAGIC_CARPET = ITEMS.register("magic_carpet", ItemMagicCarpet::new);
 
+    public static final RegistryObject<Item> LURKER_SPAWN_EGG = ITEMS.register("lurker_spawn_egg",
+            () -> new ForgeSpawnEggItem(AccessModEntityTypes.LURKER, 12698049, 4802889,
+                    (new Item.Properties()).tab(ItemGroup.TAB_MISC)));
+
     public static void register(IEventBus modEventBus){
         ITEMS.register(modEventBus);
     }

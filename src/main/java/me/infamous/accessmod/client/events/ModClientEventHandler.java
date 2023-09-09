@@ -1,7 +1,8 @@
 package me.infamous.accessmod.client.events;
 
 import me.infamous.accessmod.AccessMod;
-import me.infamous.accessmod.client.renderer.DuneRenderer;
+import me.infamous.accessmod.client.renderer.dune.DuneRenderer;
+import me.infamous.accessmod.client.renderer.lurker.LurkerRenderer;
 import ovh.corail.flyingthings.render.RenderMagicCarpet;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import net.minecraft.client.Minecraft;
@@ -22,5 +23,7 @@ public class ModClientEventHandler {
                 manager -> new SpriteRenderer<>(manager, Minecraft.getInstance().getItemRenderer(), 3.0F, true));
 
         RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.MAGIC_CARPET.get(), RenderMagicCarpet::new);
+
+        RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.LURKER.get(), LurkerRenderer::new);
     }
 }

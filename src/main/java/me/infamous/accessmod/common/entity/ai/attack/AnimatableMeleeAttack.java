@@ -20,6 +20,6 @@ public interface AnimatableMeleeAttack {
     }
 
     default boolean isTimeToAttack(){
-        return this.getAttackAnimationTick() == this.getAttackAnimationActionPoint();
+        return this.getAttackAnimationLength() - this.getAttackAnimationTick() == this.getAttackAnimationActionPoint();
     }
 }

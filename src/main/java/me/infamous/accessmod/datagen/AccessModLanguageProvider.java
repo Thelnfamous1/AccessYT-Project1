@@ -23,5 +23,7 @@ public class AccessModLanguageProvider extends LanguageProvider {
         this.addEntityType(AccessYTEntityTypes.MAGIC_CARPET, "Magic Carpet");
         this.add(AccessYTItems.MAGIC_CARPET.get(), "Magic Carpet");
          */
+        this.addEntityType(AccessModEntityTypes.LURKER, "Lurker");
+        this.add(AccessModItems.LURKER_SPAWN_EGG.get(), "Lurker Spawn Egg");
     }
 }

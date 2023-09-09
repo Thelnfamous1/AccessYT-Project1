@@ -1,6 +1,7 @@
 package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
+import me.infamous.accessmod.common.entity.lurker.Lurker;
 import ovh.corail.flyingthings.entity.EntityMagicCarpet;
 import me.infamous.accessmod.common.entity.dune.Dune;
 import me.infamous.accessmod.common.entity.dune.WrathfulDust;
@@ -37,6 +38,11 @@ public class AccessModEntityTypes {
                     .sized(1.5f, 0.3f)
                     .setCustomClientFactory(EntityMagicCarpet::new)
                     .noSummon());
+
+    public static final RegistryObject<EntityType<Lurker>> LURKER = register("lurker",
+            EntityType.Builder.of(Lurker::new, EntityClassification.MONSTER)
+                    .sized(1.0F, 3.4F)
+                    .clientTrackingRange(8));
 
 
     private static <T extends Entity> RegistryObject<EntityType<T>> register(String pKey, EntityType.Builder<T> pBuilder) {

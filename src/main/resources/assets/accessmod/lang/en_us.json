@@ -4,6 +4,8 @@
   "entity.accessmod.wrathful_dust": "Wrathful Dust",
   "item.accessmod.dune_spawn_egg": "Dune Spawn Egg",
   "death.attack.suffocation": "%s suffocated",
+  "entity.accessmod.lurker": "Lurker",
+  "item.accessmod.lurker_spawn_egg": "Lurker Spawn Egg",
 
   "accessmod.item.magic_carpet": "§6Magic Carpet",
   "accessmod.item.magic_carpet.halloween": "§6Halloween Carpet",
