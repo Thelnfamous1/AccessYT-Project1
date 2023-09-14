@@ -1,6 +1,5 @@
 package me.infamous.accessmod.common.entity.ai.magic;
 
-import net.minecraft.entity.MobEntity;
 import net.minecraft.util.RangedInteger;
 import net.minecraft.util.SoundEvent;
 

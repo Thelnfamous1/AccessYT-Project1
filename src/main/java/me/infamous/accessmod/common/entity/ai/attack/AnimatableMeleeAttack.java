@@ -1,18 +1,13 @@
 package me.infamous.accessmod.common.entity.ai.attack;
 
-public interface AnimatableMeleeAttack {
-    byte START_ATTACK_EVENT = 4;
+public interface AnimatableMeleeAttack<A extends AnimatableMeleeAttack.AttackType> {
 
     int getAttackAnimationTick();
 
     void setAttackAnimationTick(int attackAnimationTick);
 
-    int getAttackAnimationLength();
-
-    int getAttackAnimationActionPoint();
-
-    default void startAttackAnimation(){
-        this.setAttackAnimationTick(this.getAttackAnimationLength());
+    default void startAttackAnimation(A attackType){
+        this.setAttackAnimationTick(attackType.getAttackAnimationLength());
     }
 
     default boolean isAttackAnimationInProgress(){
@@ -20,6 +15,24 @@ public interface AnimatableMeleeAttack {
     }
 
     default boolean isTimeToAttack(){
-        return this.getAttackAnimationLength() - this.getAttackAnimationTick() == this.getAttackAnimationActionPoint();
+        return this.getCurrentAttackType().getAttackAnimationLength() - this.getAttackAnimationTick() == this.getCurrentAttackType().getAttackAnimationActionPoint();
+    }
+
+    A getCurrentAttackType();
+
+    void setCurrentAttackType(A attackType);
+
+    A getDefaultAttackType();
+
+    default void resetAttackType(){
+        this.setCurrentAttackType(this.getDefaultAttackType());
+    }
+
+    interface AttackType{
+        int getId();
+
+        int getAttackAnimationActionPoint();
+
+        int getAttackAnimationLength();
     }
 }

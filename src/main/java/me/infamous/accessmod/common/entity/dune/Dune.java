@@ -56,9 +56,7 @@ import software.bernie.geckolib3.util.GeckoLibUtil;
 import javax.annotation.Nullable;
 import java.util.Random;
 
-public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeAttack, IEntityAdditionalSpawnData, Digger, AnimatableMagic<DuneMagicType> {
-    public static final int ATTACK_ANIMATION_LENGTH = 18;
-    public static final int ATTACK_ANIMATION_ACTION_POINT = 2;
+public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeAttack<DuneAttackType>, IEntityAdditionalSpawnData, Digger, AnimatableMagic<DuneMagicType> {
     public static final int DIG_ANIMATION_LENGTH = 38;
     public static final int BASE_WRATH_DURATION = 100;
     public static final int PREFERRED_RANGED_DISTANCE = 8;
@@ -72,11 +70,13 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     protected static final AnimationBuilder BURIED_ANIM = new AnimationBuilder().addAnimation("buried", ILoopType.EDefaultLoopTypes.HOLD_ON_LAST_FRAME);
 
     private static final DataParameter<Digger.DigState> DATA_DIG_STATE = EntityDataManager.defineId(Dune.class, AccessModDataSerializers.getSerializer(AccessModDataSerializers.DIG_STATE));
+    private static final DataParameter<Byte> DATA_ATTACK_TYPE_ID = EntityDataManager.defineId(Dune.class, DataSerializers.BYTE);
     private static final DataParameter<Byte> DATA_MAGIC_TYPE_ID = EntityDataManager.defineId(Dune.class, DataSerializers.BYTE);
 
     private int attackAnimationTick;
     private int magicUseTicks;
     private DuneMagicType currentMagicType;
+    private DuneAttackType currentAttackType;
     private final MagicCooldownTracker<Dune, DuneMagicType> magicCooldowns = new MagicCooldownTracker<>(this);
 
     public Dune(EntityType<? extends Dune> entityType, World world) {
@@ -113,7 +113,7 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
         this.goalSelector.addGoal(2, new UsingMagicGoal<>(this));
         this.goalSelector.addGoal(3, new ConditionalGoal<>(Dune::canUseDrag, this, new DuneDragGoal(this), true));
         this.goalSelector.addGoal(4, new ConditionalGoal<>(Dune::canUseRanged, this, new DuneRangedGoal(this), false));
-        this.goalSelector.addGoal(5, new ConditionalGoal<>(Dune::canUseMelee, this, new AnimatableMeleeAttackGoal<>(this, 1.0D, false), true));
+        this.goalSelector.addGoal(5, new ConditionalGoal<>(Dune::canUseMelee, this, new AnimatableMeleeAttackGoal<>(this, DuneAttackType.SWIPE, 1.0D, false), true));
         this.goalSelector.addGoal(6, new AttackTurtleEggGoal(this, 1.0D, 3));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
     }
@@ -152,6 +152,7 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DATA_DIG_STATE, DigState.SURFACED);
+        this.entityData.define(DATA_ATTACK_TYPE_ID, (byte)0);
         this.entityData.define(DATA_MAGIC_TYPE_ID, (byte)0);
     }
 
@@ -160,17 +161,10 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
         super.onSyncedDataUpdated(pKey);
         if (DATA_DIG_STATE.equals(pKey)) {
             this.refreshDimensions();
+        } else if(DATA_ATTACK_TYPE_ID.equals(pKey)){
+            this.startAttackAnimation(this.getCurrentAttackType());
         } else if(DATA_MAGIC_TYPE_ID.equals(pKey)){
             this.startMagicAnimation(this.getCurrentMagicType());
-        }
-    }
-
-    @Override
-    public void handleEntityEvent(byte pId) {
-        if (pId == AnimatableMeleeAttack.START_ATTACK_EVENT) {
-            this.startAttackAnimation();
-        } else {
-            super.handleEntityEvent(pId);
         }
     }
 
@@ -207,6 +201,9 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     public void baseTick() {
         super.baseTick();
         this.tickAnimations();
+        if(!this.level.isClientSide && this.attackAnimationTick <= 0){
+            this.resetAttackType();
+        }
     }
 
     private void tickAnimations() {
@@ -343,7 +340,9 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
                     break;
             }
         } else if(this.isAttackAnimationInProgress()){
-            event.getController().setAnimation(MELEE_ANIM);
+            if (this.getCurrentAttackType() == DuneAttackType.SWIPE) {
+                event.getController().setAnimation(MELEE_ANIM);
+            }
         } else if(event.isMoving()){
             event.getController().setAnimation(WALK_ANIM);
         } else{
@@ -389,13 +388,19 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     }
 
     @Override
-    public int getAttackAnimationLength() {
-        return ATTACK_ANIMATION_LENGTH;
+    public DuneAttackType getCurrentAttackType() {
+        return !this.level.isClientSide ? this.currentAttackType : DuneAttackType.byId(this.entityData.get(DATA_ATTACK_TYPE_ID));
     }
 
     @Override
-    public int getAttackAnimationActionPoint() {
-        return ATTACK_ANIMATION_ACTION_POINT;
+    public void setCurrentAttackType(DuneAttackType attackType) {
+        this.currentAttackType = attackType;
+        this.entityData.set(DATA_ATTACK_TYPE_ID, (byte)attackType.getId());
+    }
+
+    @Override
+    public DuneAttackType getDefaultAttackType() {
+        return DuneAttackType.NONE;
     }
 
     /***

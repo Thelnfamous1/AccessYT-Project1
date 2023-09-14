@@ -7,7 +7,9 @@ import me.infamous.accessmod.common.entity.ai.attack.AnimatableMeleeAttackGoal;
 import me.infamous.accessmod.common.entity.ai.disguise.AnimatableDisguise;
 import me.infamous.accessmod.common.entity.dune.Dune;
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.attributes.AttributeModifierMap;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.goal.*;
@@ -16,6 +18,10 @@ import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
+import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.potion.EffectInstance;
+import net.minecraft.potion.Effects;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
@@ -30,9 +36,8 @@ import software.bernie.geckolib3.core.manager.AnimationData;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
 import software.bernie.geckolib3.util.GeckoLibUtil;
 
-public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMeleeAttack, AnimatableDisguise {
-    private static final int ATTACK_ANIMATION_LENGTH = 13;
-    private static final int ATTACK_ANIMATION_ACTION_POINT = 2;
+public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMeleeAttack<LurkerAttackType>, AnimatableDisguise {
+    public static final int BASE_BLINDNESS_DURATION = 100;
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
     protected static final AnimationBuilder SLEEP_ANIM = new AnimationBuilder().addAnimation("sleep", true);
     protected static final AnimationBuilder RUN_ANIM = new AnimationBuilder().addAnimation("run", true);
@@ -41,7 +46,10 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     protected static final AnimationBuilder IDLE_ANIM = new AnimationBuilder().addAnimation("idle", true);
     protected static final AnimationBuilder HIDE_ANIM = new AnimationBuilder().addAnimation("turning_below", false);
     protected static final AnimationBuilder RISE_ANIM = new AnimationBuilder().addAnimation("turning_jump", false);
+    private static final DataParameter<Byte> DATA_ATTACK_TYPE_ID = EntityDataManager.defineId(Lurker.class, DataSerializers.BYTE);
+
     private int attackAnimationTick;
+    private LurkerAttackType currentAttackType;
 
     public Lurker(EntityType<? extends Lurker> type, World world) {
         super(type, world);
@@ -65,13 +73,17 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     }
 
     protected void addMoveGoals() {
-        this.goalSelector.addGoal(5, new ConditionalGoal<>(Lurker::canUseMelee, this, new AnimatableMeleeAttackGoal<>(this, 1.0D, false), true));
+        this.goalSelector.addGoal(5, new ConditionalGoal<>(Lurker::canUseMelee, this, new AnimatableMeleeAttackGoal<Lurker, LurkerAttackType>(this, Lurker::pickAttackType, 1.0D, false), true));
         this.goalSelector.addGoal(6, new AttackTurtleEggGoal(this, 1.0D, 3));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
     }
 
     private boolean canUseMelee(){
         return !AnimatableDisguise.cast(this).isDisguised();
+    }
+
+    private static LurkerAttackType pickAttackType(Lurker lurker){
+        return lurker.level.random.nextInt(5) == 0 ? LurkerAttackType.HOOK : LurkerAttackType.SLASH;
     }
 
     private void addLookGoals() {
@@ -89,11 +101,15 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
+        this.entityData.define(DATA_ATTACK_TYPE_ID, (byte)0);
     }
 
     @Override
     public void onSyncedDataUpdated(DataParameter<?> pKey) {
         super.onSyncedDataUpdated(pKey);
+        if(DATA_ATTACK_TYPE_ID.equals(pKey)){
+            this.startAttackAnimation(this.getCurrentAttackType());
+        }
     }
 
     @Override
@@ -115,26 +131,36 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     protected void playStepSound(BlockPos pPos, BlockState pBlock) {
     }
 
-    @Override
-    public void handleEntityEvent(byte pId) {
-        if (pId == AnimatableMeleeAttack.START_ATTACK_EVENT) {
-            this.startAttackAnimation();
-        } else {
-            super.handleEntityEvent(pId);
-        }
-    }
-
 
     @Override
     public void baseTick() {
         super.baseTick();
         this.tickAnimations();
+        if(!this.level.isClientSide && this.attackAnimationTick <= 0){
+            this.resetAttackType();
+        }
     }
 
     private void tickAnimations() {
         if(this.attackAnimationTick > 0){
             this.attackAnimationTick--;
         }
+    }
+
+    @Override
+    public boolean doHurtTarget(Entity pEntity) {
+        boolean hurtTarget = super.doHurtTarget(pEntity);
+        if (hurtTarget && this.getMainHandItem().isEmpty() && pEntity instanceof LivingEntity
+                && this.getCurrentAttackType() == LurkerAttackType.HOOK) {
+            addBlindness(this, (LivingEntity) pEntity);
+        }
+
+        return hurtTarget;
+    }
+
+    static void addBlindness(LivingEntity attacker, LivingEntity target) {
+        float effectiveDifficulty = attacker.level.getCurrentDifficultyAt(attacker.blockPosition()).getEffectiveDifficulty();
+        target.addEffect(new EffectInstance(Effects.BLINDNESS, BASE_BLINDNESS_DURATION * (int)effectiveDifficulty));
     }
 
     /**
@@ -148,7 +174,16 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
 
     private <E extends Lurker> PlayState animationPredicate(AnimationEvent<E> event) {
         if(this.isAttackAnimationInProgress()){
-            event.getController().setAnimation(ATTACK_ANIM);
+            switch (this.getCurrentAttackType()){
+                case SLASH:
+                    event.getController().setAnimation(ATTACK_ANIM);
+                    break;
+                case HOOK:
+                    event.getController().setAnimation(HOOK_ANIM);
+                    break;
+                default: // do nothing
+                    break;
+            }
         } else if(event.isMoving()){
             event.getController().setAnimation(RUN_ANIM);
         } else{
@@ -177,12 +212,19 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     }
 
     @Override
-    public int getAttackAnimationLength() {
-        return ATTACK_ANIMATION_LENGTH;
+    public LurkerAttackType getCurrentAttackType() {
+        return !this.level.isClientSide ? this.currentAttackType : LurkerAttackType.byId(this.entityData.get(DATA_ATTACK_TYPE_ID));
     }
 
     @Override
-    public int getAttackAnimationActionPoint() {
-        return ATTACK_ANIMATION_ACTION_POINT;
+    public void setCurrentAttackType(LurkerAttackType attackType) {
+        this.currentAttackType = attackType;
+        this.entityData.set(DATA_ATTACK_TYPE_ID, (byte)attackType.getId());
     }
+
+    @Override
+    public LurkerAttackType getDefaultAttackType() {
+        return LurkerAttackType.NONE;
+    }
+
 }

@@ -1,17 +1,24 @@
 package me.infamous.accessmod.common.entity.ai.attack;
 
-import me.infamous.accessmod.common.entity.ai.attack.AnimatableMeleeAttack;
 import net.minecraft.entity.CreatureEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.util.Hand;
 
-public class AnimatableMeleeAttackGoal<T extends CreatureEntity & AnimatableMeleeAttack> extends MeleeAttackGoal {
-    protected final T attacker;
+import java.util.function.Function;
 
-    public AnimatableMeleeAttackGoal(T attacker, double speedModifier, boolean followingTargetEvenIfNotSeen) {
+public class AnimatableMeleeAttackGoal<T extends CreatureEntity & AnimatableMeleeAttack<A>, A extends AnimatableMeleeAttack.AttackType> extends MeleeAttackGoal {
+    protected final T attacker;
+    private final Function<T, A> attackTypeGetter;
+
+    public AnimatableMeleeAttackGoal(T attacker, A attackType, double speedModifier, boolean followingTargetEvenIfNotSeen) {
+        this(attacker, m -> attackType, speedModifier, followingTargetEvenIfNotSeen);
+    }
+
+    public AnimatableMeleeAttackGoal(T attacker, Function<T, A> attackTypeGetter, double speedModifier, boolean followingTargetEvenIfNotSeen) {
         super(attacker, speedModifier, followingTargetEvenIfNotSeen);
         this.attacker = attacker;
+        this.attackTypeGetter = attackTypeGetter;
     }
 
     @Override
@@ -32,10 +39,11 @@ public class AnimatableMeleeAttackGoal<T extends CreatureEntity & AnimatableMele
     @Override
     protected void checkAndPerformAttack(LivingEntity pEnemy, double pDistToEnemySqr) {
         double attackReachSqr = this.getAttackReachSqr(pEnemy);
-        if (pDistToEnemySqr <= attackReachSqr) {
+        if (pDistToEnemySqr <= attackReachSqr && this.getTicksUntilNextAttack() <= 0) {
             if(!this.attacker.isAttackAnimationInProgress()){
-                this.attacker.startAttackAnimation();
-                this.attacker.level.broadcastEntityEvent(this.attacker, AnimatableMeleeAttack.START_ATTACK_EVENT);
+                A attackType = this.attackTypeGetter.apply(this.attacker);
+                this.attacker.startAttackAnimation(attackType);
+                this.attacker.setCurrentAttackType(attackType);
             } else if(this.attacker.isTimeToAttack()){
                 this.resetAttackCooldown();
                 this.mob.swing(Hand.MAIN_HAND);
