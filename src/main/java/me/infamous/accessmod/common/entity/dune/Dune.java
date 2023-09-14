@@ -434,7 +434,7 @@ public class Dune extends MonsterEntity implements IAnimatable, AnimatableMeleeA
     }
 
     @Override
-    public SoundEvent getAgitatedSound() {
+    public SoundEvent getDigFailSound() {
         return SoundEvents.HUSK_HURT;
     }
 

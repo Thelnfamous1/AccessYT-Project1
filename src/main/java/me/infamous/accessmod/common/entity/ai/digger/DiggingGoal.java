@@ -29,7 +29,7 @@ public class DiggingGoal<T extends MobEntity & Digger> extends Goal {
             this.mob.setDigging();
             this.mob.playSound(this.mob.getDigSound(), 5.0F, 1.0F);
         } else {
-            this.mob.playSound(this.mob.getAgitatedSound(), 5.0F, 1.0F);
+            this.mob.playSound(this.mob.getDigFailSound(), 5.0F, 1.0F);
             this.stop();
         }
     }

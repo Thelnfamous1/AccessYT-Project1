@@ -38,7 +38,7 @@ public interface Digger {
 
     SoundEvent getDigSound();
 
-    SoundEvent getAgitatedSound();
+    SoundEvent getDigFailSound();
 
     default void setSurfaced(){
         this.setDigState(DigState.SURFACED);

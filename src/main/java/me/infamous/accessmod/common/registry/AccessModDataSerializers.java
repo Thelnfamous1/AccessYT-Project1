@@ -2,6 +2,7 @@ package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.common.entity.ai.digger.Digger;
+import me.infamous.accessmod.common.entity.ai.disguise.AnimatableDisguise;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.datasync.IDataSerializer;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -27,6 +28,22 @@ public class AccessModDataSerializers {
 
         @Override
         public Digger.DigState copy(Digger.DigState pValue) {
+            return pValue;
+        }
+    }));
+    public static final RegistryObject<DataSerializerEntry> DISGUISE_STATE = DATA_SERIALIZERS.register("disguise_state", () -> new DataSerializerEntry(new IDataSerializer<AnimatableDisguise.DisguiseState>() {
+        @Override
+        public void write(PacketBuffer pBuffer, AnimatableDisguise.DisguiseState pValue) {
+            pBuffer.writeEnum(pValue);
+        }
+
+        @Override
+        public AnimatableDisguise.DisguiseState read(PacketBuffer pBuffer) {
+            return pBuffer.readEnum(AnimatableDisguise.DisguiseState.class);
+        }
+
+        @Override
+        public AnimatableDisguise.DisguiseState copy(AnimatableDisguise.DisguiseState pValue) {
             return pValue;
         }
     }));

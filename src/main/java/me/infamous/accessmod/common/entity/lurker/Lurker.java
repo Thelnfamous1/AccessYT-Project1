@@ -6,6 +6,7 @@ import me.infamous.accessmod.common.entity.ai.attack.AnimatableMeleeAttack;
 import me.infamous.accessmod.common.entity.ai.attack.AnimatableMeleeAttackGoal;
 import me.infamous.accessmod.common.entity.ai.disguise.AnimatableDisguise;
 import me.infamous.accessmod.common.entity.dune.Dune;
+import me.infamous.accessmod.common.registry.AccessModDataSerializers;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -17,6 +18,7 @@ import net.minecraft.entity.monster.MonsterEntity;
 import net.minecraft.entity.passive.IronGolemEntity;
 import net.minecraft.entity.passive.TurtleEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
@@ -44,9 +46,11 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     protected static final AnimationBuilder ATTACK_ANIM = new AnimationBuilder().addAnimation("attack", false);
     protected static final AnimationBuilder HOOK_ANIM = new AnimationBuilder().addAnimation("attack_hook", false);
     protected static final AnimationBuilder IDLE_ANIM = new AnimationBuilder().addAnimation("idle", true);
-    protected static final AnimationBuilder HIDE_ANIM = new AnimationBuilder().addAnimation("turning_below", false);
-    protected static final AnimationBuilder RISE_ANIM = new AnimationBuilder().addAnimation("turning_jump", false);
+    protected static final AnimationBuilder DISGUISE_ANIM = new AnimationBuilder().addAnimation("turning_below", false);
+    protected static final AnimationBuilder REVEAL_ANIM = new AnimationBuilder().addAnimation("turning_jump", false);
     private static final DataParameter<Byte> DATA_ATTACK_TYPE_ID = EntityDataManager.defineId(Lurker.class, DataSerializers.BYTE);
+
+    private static final DataParameter<AnimatableDisguise.DisguiseState> DATA_DISGUISE_STATE = EntityDataManager.defineId(Lurker.class, AccessModDataSerializers.getSerializer(AccessModDataSerializers.DISGUISE_STATE));
 
     private int attackAnimationTick;
     private LurkerAttackType currentAttackType;
@@ -102,6 +106,7 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DATA_ATTACK_TYPE_ID, (byte)0);
+        this.entityData.define(DATA_DISGUISE_STATE, DisguiseState.REVEALED);
     }
 
     @Override
@@ -161,6 +166,18 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     static void addBlindness(LivingEntity attacker, LivingEntity target) {
         float effectiveDifficulty = attacker.level.getCurrentDifficultyAt(attacker.blockPosition()).getEffectiveDifficulty();
         target.addEffect(new EffectInstance(Effects.BLINDNESS, BASE_BLINDNESS_DURATION * (int)effectiveDifficulty));
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundNBT pCompound) {
+        super.addAdditionalSaveData(pCompound);
+        this.readDisguiseState(pCompound);
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundNBT pCompound) {
+        super.readAdditionalSaveData(pCompound);
+        this.writeDisguiseState(pCompound);
     }
 
     /**
@@ -227,4 +244,37 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
         return LurkerAttackType.NONE;
     }
 
+    /**
+     * {@link AnimatableDisguise} methods
+     */
+
+    @Override
+    public SoundEvent getRevealSound() {
+        return SoundEvents.ZOMBIE_AMBIENT;
+    }
+
+    @Override
+    public SoundEvent getDisguiseSound() {
+        return SoundEvents.ZOMBIE_AMBIENT;
+    }
+
+    @Override
+    public DisguiseState getDisguiseState() {
+        return null;
+    }
+
+    @Override
+    public void setDisguiseState(DisguiseState disguiseState) {
+        this.entityData.set(DATA_DISGUISE_STATE, disguiseState);
+    }
+
+    @Override
+    public boolean wantsToDisguise() {
+        return this.getTarget() == null && this.level.canSeeSky(this.blockPosition());
+    }
+
+    @Override
+    public boolean wantsToReveal() {
+        return this.getTarget() != null && this.closerThan(this.getTarget(), 7.0D);
+    }
 }
