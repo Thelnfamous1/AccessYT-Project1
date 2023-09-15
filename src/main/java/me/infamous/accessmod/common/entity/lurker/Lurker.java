@@ -223,7 +223,9 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     }
 
     private <E extends Lurker> PlayState animationPredicate(AnimationEvent<E> event) {
-        if(this.isDisguising()){
+        if(this.isDisguised()){
+            return PlayState.STOP;
+        } else if(this.isDisguising()){
             event.getController().setAnimation(DISGUISE_ANIM);
         } else if(this.isRevealing()){
             event.getController().setAnimation(REVEAL_ANIM);

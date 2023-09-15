@@ -1,7 +1,10 @@
 package me.infamous.accessmod.common.entity.ai.disguise;
 
+import me.infamous.accessmod.common.network.AccessModNetwork;
+import me.infamous.accessmod.common.network.ClientboundRevealPacket;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.ai.goal.Goal;
+import net.minecraftforge.fml.network.PacketDistributor;
 
 import java.util.EnumSet;
 
@@ -25,6 +28,8 @@ public class RevealingGoal<T extends MobEntity & AnimatableDisguise> extends Goa
     @Override
     public void start() {
         this.mob.setRevealing();
+        AccessModNetwork.SYNC_CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> this.mob),
+                new ClientboundRevealPacket<>(this.mob));
         this.mob.playSound(this.mob.getRevealSound(), 5.0F, 1.0F);
         this.revealingTicks = this.duration;
     }
