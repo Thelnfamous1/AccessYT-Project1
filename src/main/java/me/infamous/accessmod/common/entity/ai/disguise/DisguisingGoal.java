@@ -1,19 +1,22 @@
 package me.infamous.accessmod.common.entity.ai.disguise;
 
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.ai.goal.Goal;
 
 import java.util.EnumSet;
 
-public class DisguiseGoal<T extends MobEntity & AnimatableDisguise> extends Goal {
+public class DisguisingGoal<T extends MobEntity & AnimatableDisguise> extends Goal {
 
     protected final T mob;
     private final int duration;
+    private final EntityType<?> disguiseType;
     private int disguisingTicks;
 
-    public DisguiseGoal(T mob, int duration){
+    public DisguisingGoal(T mob, int duration, EntityType<?> disguiseType){
         this.mob = mob;
         this.duration = duration;
+        this.disguiseType = disguiseType;
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.JUMP, Flag.LOOK));
     }
 
@@ -43,7 +46,7 @@ public class DisguiseGoal<T extends MobEntity & AnimatableDisguise> extends Goal
     @Override
     public void stop() {
         if(this.disguisingTicks <= 0){
-            this.mob.setDisguised();
+            this.mob.setDisguised(this.disguiseType);
         } else{
             this.mob.setRevealed();
         }

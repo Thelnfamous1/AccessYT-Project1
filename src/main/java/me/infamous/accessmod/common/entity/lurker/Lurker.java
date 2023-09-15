@@ -1,11 +1,15 @@
 package me.infamous.accessmod.common.entity.lurker;
 
+import me.infamous.accessmod.AccessMod;
+import me.infamous.accessmod.common.AccessModUtil;
 import me.infamous.accessmod.common.entity.ai.AttackTurtleEggGoal;
 import me.infamous.accessmod.common.entity.ai.ConditionalGoal;
 import me.infamous.accessmod.common.entity.ai.attack.AnimatableMeleeAttack;
 import me.infamous.accessmod.common.entity.ai.attack.AnimatableMeleeAttackGoal;
 import me.infamous.accessmod.common.entity.ai.disguise.AnimatableDisguise;
-import me.infamous.accessmod.common.entity.dune.Dune;
+import me.infamous.accessmod.common.entity.ai.disguise.DisguisingGoal;
+import me.infamous.accessmod.common.entity.ai.disguise.RevealingGoal;
+import me.infamous.accessmod.common.entity.ai.disguise.StalkWhileDisguisedGoal;
 import me.infamous.accessmod.common.registry.AccessModDataSerializers;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
@@ -22,13 +26,16 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.particles.ParticleTypes;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Effects;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.PlayState;
 import software.bernie.geckolib3.core.builder.AnimationBuilder;
@@ -40,6 +47,9 @@ import software.bernie.geckolib3.util.GeckoLibUtil;
 
 public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMeleeAttack<LurkerAttackType>, AnimatableDisguise {
     public static final int BASE_BLINDNESS_DURATION = 100;
+    public static final int REVEAL_ANIMATION_LENGTH = AccessModUtil.secondsToTicks(1.333D);
+    public static final int DISGUISE_ANIMATION_LENGTH = AccessModUtil.secondsToTicks(1.875D);
+    private static final int CLOSE_ENOUGH_TO_REVEAL = 8;
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
     protected static final AnimationBuilder SLEEP_ANIM = new AnimationBuilder().addAnimation("sleep", true);
     protected static final AnimationBuilder RUN_ANIM = new AnimationBuilder().addAnimation("run", true);
@@ -77,13 +87,16 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     }
 
     protected void addMoveGoals() {
+        this.goalSelector.addGoal(0, new RevealingGoal<>(this, REVEAL_ANIMATION_LENGTH));
+        this.goalSelector.addGoal(0, new DisguisingGoal<>(this, DISGUISE_ANIMATION_LENGTH, EntityType.PIG));
+        this.goalSelector.addGoal(1, new StalkWhileDisguisedGoal<>(this, 1.0D, CLOSE_ENOUGH_TO_REVEAL));
         this.goalSelector.addGoal(5, new ConditionalGoal<>(Lurker::canUseMelee, this, new AnimatableMeleeAttackGoal<Lurker, LurkerAttackType>(this, Lurker::pickAttackType, 1.0D, false), true));
         this.goalSelector.addGoal(6, new AttackTurtleEggGoal(this, 1.0D, 3));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
     }
 
     private boolean canUseMelee(){
-        return !AnimatableDisguise.cast(this).isDisguised();
+        return !AnimatableDisguise.entityDisguise(this).isDisguised();
     }
 
     private static LurkerAttackType pickAttackType(Lurker lurker){
@@ -96,7 +109,7 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     }
 
     protected void addTargetGoals() {
-        this.targetSelector.addGoal(1, (new HurtByTargetGoal(this, Dune.class)).setAlertOthers());
+        this.targetSelector.addGoal(1, (new HurtByTargetGoal(this, Lurker.class)).setAlertOthers());
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, PlayerEntity.class, true));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, IronGolemEntity.class, true));
         this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, TurtleEntity.class, 10, true, false, TurtleEntity.BABY_ON_LAND_SELECTOR));
@@ -114,6 +127,8 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
         super.onSyncedDataUpdated(pKey);
         if(DATA_ATTACK_TYPE_ID.equals(pKey)){
             this.startAttackAnimation(this.getCurrentAttackType());
+        } else if(DATA_DISGUISE_STATE.equals(pKey)){
+            AccessMod.LOGGER.info("DisguiseState for {}: {}", this, this.getDisguiseState());
         }
     }
 
@@ -153,6 +168,25 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     }
 
     @Override
+    public void tick() {
+        super.tick();
+        if(!this.level.isClientSide){
+            if(this.isDisguised() && this.tickCount % 20 == 0){
+                Vector3d vector3d = this.getDeltaMovement();
+                ((ServerWorld)this.level).sendParticles(ParticleTypes.SOUL,
+                        this.getX() + (this.random.nextDouble() - 0.5D) * (double)this.getBbWidth(),
+                        this.getY() + 0.1D,
+                        this.getZ() + (this.random.nextDouble() - 0.5D) * (double)this.getBbWidth(),
+                        0,
+                        vector3d.x * -0.2D,
+                        0.1D,
+                        vector3d.z * -0.2D,
+                        1.0D);
+            }
+        }
+    }
+
+    @Override
     public boolean doHurtTarget(Entity pEntity) {
         boolean hurtTarget = super.doHurtTarget(pEntity);
         if (hurtTarget && this.getMainHandItem().isEmpty() && pEntity instanceof LivingEntity
@@ -177,7 +211,6 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     @Override
     public void readAdditionalSaveData(CompoundNBT pCompound) {
         super.readAdditionalSaveData(pCompound);
-        this.writeDisguiseState(pCompound);
     }
 
     /**
@@ -190,7 +223,13 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     }
 
     private <E extends Lurker> PlayState animationPredicate(AnimationEvent<E> event) {
-        if(this.isAttackAnimationInProgress()){
+        if(this.isDisguising()){
+            event.getController().setAnimation(DISGUISE_ANIM);
+        } else if(this.isRevealing()){
+            event.getController().setAnimation(REVEAL_ANIM);
+        }
+        // We are revealed, so check revealed animations
+        else if(this.isAttackAnimationInProgress()){
             switch (this.getCurrentAttackType()){
                 case SLASH:
                     event.getController().setAnimation(ATTACK_ANIM);
@@ -260,7 +299,7 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
 
     @Override
     public DisguiseState getDisguiseState() {
-        return null;
+        return this.entityData.get(DATA_DISGUISE_STATE);
     }
 
     @Override
@@ -270,11 +309,13 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
 
     @Override
     public boolean wantsToDisguise() {
+        if(this.getLastHurtByMob() != null) return false;
         return this.getTarget() == null && this.level.canSeeSky(this.blockPosition());
     }
 
     @Override
     public boolean wantsToReveal() {
-        return this.getTarget() != null && this.closerThan(this.getTarget(), 7.0D);
+        if(this.getLastHurtByMob() != null) return true;
+        return this.getTarget() != null && this.closerThan(this.getTarget(), CLOSE_ENOUGH_TO_REVEAL);
     }
 }

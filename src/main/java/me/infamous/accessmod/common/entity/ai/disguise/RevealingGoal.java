@@ -5,13 +5,13 @@ import net.minecraft.entity.ai.goal.Goal;
 
 import java.util.EnumSet;
 
-public class RevealGoal<T extends MobEntity & AnimatableDisguise> extends Goal {
+public class RevealingGoal<T extends MobEntity & AnimatableDisguise> extends Goal {
 
     protected final T mob;
     private final int duration;
     private int revealingTicks;
 
-    public RevealGoal(T mob, int duration){
+    public RevealingGoal(T mob, int duration){
         this.mob = mob;
         this.duration = duration;
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.JUMP, Flag.LOOK));
@@ -42,10 +42,6 @@ public class RevealGoal<T extends MobEntity & AnimatableDisguise> extends Goal {
 
     @Override
     public void stop() {
-        if(this.revealingTicks <= 0){
-            this.mob.setRevealed();
-        } else{
-            this.mob.setDisguised();
-        }
+        this.mob.setRevealed();
     }
 }

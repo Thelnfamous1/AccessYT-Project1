@@ -1,6 +1,6 @@
 package me.infamous.accessmod.common.entity.ai.disguise;
 
-import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.SoundEvent;
 import net.minecraftforge.common.util.Constants;
@@ -8,9 +8,9 @@ import xyz.nucleoid.disguiselib.casts.EntityDisguise;
 
 public interface AnimatableDisguise {
 
-    String DISGUISE_STATE = "DisguiseState";
+    String DISGUISE_LIB_TAG = "DisguiseLib";
 
-    static <T extends Entity & AnimatableDisguise> EntityDisguise cast(T entity){
+    static EntityDisguise entityDisguise(AnimatableDisguise entity){
         return (EntityDisguise) entity;
     }
 
@@ -28,16 +28,19 @@ public interface AnimatableDisguise {
 
     default void setRevealing(){
         this.setDisguiseState(DisguiseState.REVEALING);
+        EntityDisguise entityDisguise = entityDisguise(this);
+        if(entityDisguise.isDisguised()) entityDisguise.removeDisguise();
     }
 
+    /**
+     * If the DisguiseLib tag is present, then we must be disguised
+     */
     default void readDisguiseState(CompoundNBT pCompound) {
-        if (pCompound.contains(DISGUISE_STATE, Constants.NBT.TAG_ANY_NUMERIC)) {
-            this.setDisguiseState(AnimatableDisguise.DisguiseState.byOrdinal(pCompound.getByte(DISGUISE_STATE)));
+        if (pCompound.contains(DISGUISE_LIB_TAG, Constants.NBT.TAG_COMPOUND)) {
+            this.setDisguiseState(DisguiseState.DISGUISED);
+        } else{
+            this.setDisguiseState(DisguiseState.REVEALED);
         }
-    }
-
-    default void writeDisguiseState(CompoundNBT pCompound) {
-        pCompound.putByte(DISGUISE_STATE, (byte) this.getDisguiseState().ordinal());
     }
 
     SoundEvent getRevealSound();
@@ -46,14 +49,17 @@ public interface AnimatableDisguise {
 
     default void setRevealed(){
         this.setDisguiseState(DisguiseState.REVEALED);
+        EntityDisguise entityDisguise = entityDisguise(this);
+        if(entityDisguise.isDisguised()) entityDisguise.removeDisguise();
     }
 
     default boolean isRevealed(){
         return this.getDisguiseState() == DisguiseState.REVEALED;
     }
 
-    default void setDisguised(){
+    default void setDisguised(EntityType<?> disguiseType){
         this.setDisguiseState(DisguiseState.DISGUISED);
+        entityDisguise(this).disguiseAs(disguiseType);
     }
 
     default boolean isDisguised(){
@@ -69,17 +75,19 @@ public interface AnimatableDisguise {
     boolean wantsToReveal();
 
     enum DisguiseState{
-        REVEALED,
-        DISGUISING,
-        DISGUISED,
-        REVEALING;
+        REVEALED(false),
+        DISGUISING(true),
+        DISGUISED(false),
+        REVEALING(true);
 
-        public static AnimatableDisguise.DisguiseState byOrdinal(int ordinal){
-            if (ordinal < 0 || ordinal > values().length) {
-                ordinal = 0;
-            }
+        private final boolean transitional;
 
-            return values()[ordinal];
+        DisguiseState(boolean transitional) {
+            this.transitional = transitional;
+        }
+
+        public boolean isTransitional() {
+            return this.transitional;
         }
     }
 }

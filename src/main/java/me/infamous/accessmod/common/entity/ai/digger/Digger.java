@@ -26,12 +26,13 @@ public interface Digger {
 
     default void readDigState(CompoundNBT pCompound) {
         if (pCompound.contains(DIG_STATE_TAG, Constants.NBT.TAG_ANY_NUMERIC)) {
-            this.setDigState(DigState.byOrdinal(pCompound.getByte(DIG_STATE_TAG)));
+            DigState digState = DigState.byOrdinal(pCompound.getByte(DIG_STATE_TAG));
+            if(!digState.isTransitional()) this.setDigState(digState);
         }
     }
 
     default void writeDigState(CompoundNBT pCompound) {
-        pCompound.putByte(DIG_STATE_TAG, (byte) this.getDigState().ordinal());
+        if(!this.getDigState().isTransitional()) pCompound.putByte(DIG_STATE_TAG, (byte) this.getDigState().ordinal());
     }
 
     SoundEvent getEmergeSound();
@@ -65,10 +66,16 @@ public interface Digger {
     boolean wantsToEmerge();
 
     enum DigState{
-        SURFACED,
-        DIGGING,
-        BURIED,
-        EMERGING;
+        SURFACED(false),
+        DIGGING(true),
+        BURIED(false),
+        EMERGING(true);
+
+        private final boolean transitional;
+
+        DigState(boolean transitional) {
+            this.transitional = transitional;
+        }
 
         public static DigState byOrdinal(int ordinal){
             if (ordinal < 0 || ordinal > values().length) {
@@ -76,6 +83,10 @@ public interface Digger {
             }
 
             return values()[ordinal];
+        }
+
+        public boolean isTransitional() {
+            return this.transitional;
         }
     }
 }
