@@ -9,7 +9,9 @@
     "DesertWellsFeatureMixin",
     "EntityMixin",
     "GlassBottleItemMixin",
-    "LivingEntityMixin"
+    "LivingEntityAccessor",
+    "LivingEntityMixin",
+    "MobAccessor"
   ],
   "client": [],
   "minVersion": "0.8"

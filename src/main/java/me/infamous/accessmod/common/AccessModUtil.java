@@ -1,13 +1,18 @@
 package me.infamous.accessmod.common;
 
+import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.common.entity.ai.digger.Digger;
 import me.infamous.accessmod.common.entity.dune.Dune;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import me.infamous.accessmod.common.registry.AccessModPOITypes;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.tags.EntityTypeTags;
+import net.minecraft.tags.ITag;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.*;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
@@ -15,6 +20,9 @@ import net.minecraft.world.server.ServerWorld;
 
 public class AccessModUtil {
     public static final String FROM_DESERT_WELL_TAG = "FromDesertWell";
+
+
+    public static final ITag.INamedTag<EntityType<?>> LURKER_DISGUISES_AS = EntityTypeTags.createOptional(new ResourceLocation(AccessMod.MODID, "lurker_disguises_as"));
 
     public static void handleDesertWellFillBottle(ItemStack stack, World world, PlayerEntity player) {
         if(world instanceof ServerWorld){
