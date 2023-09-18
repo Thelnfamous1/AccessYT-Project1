@@ -9,6 +9,8 @@ import me.infamous.accessmod.common.entity.ai.disguise.AnimatableDisguise;
 import me.infamous.accessmod.common.entity.ai.disguise.DisguisingGoal;
 import me.infamous.accessmod.common.entity.ai.disguise.RevealingGoal;
 import me.infamous.accessmod.common.entity.ai.disguise.StalkWhileDisguisedGoal;
+import me.infamous.accessmod.common.entity.ai.sleep.SleepGoal;
+import me.infamous.accessmod.common.entity.ai.sleep.SleepingMob;
 import me.infamous.accessmod.common.registry.AccessModDataSerializers;
 import me.infamous.accessmod.mixin.LivingEntityAccessor;
 import me.infamous.accessmod.mixin.MobAccessor;
@@ -36,6 +38,7 @@ import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.LightType;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import software.bernie.geckolib3.core.IAnimatable;
@@ -50,7 +53,7 @@ import software.bernie.geckolib3.util.GeckoLibUtil;
 import java.util.Optional;
 import java.util.function.Function;
 
-public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMeleeAttack<LurkerAttackType>, AnimatableDisguise {
+public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMeleeAttack<LurkerAttackType>, AnimatableDisguise, SleepingMob {
     public static final int BASE_BLINDNESS_DURATION = 100;
     public static final int REVEAL_ANIMATION_LENGTH = AccessModUtil.secondsToTicks(1.333D);
     public static final int DISGUISE_ANIMATION_LENGTH = AccessModUtil.secondsToTicks(1.875D);
@@ -67,6 +70,7 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
 
     private static final DataParameter<AnimatableDisguise.DisguiseState> DATA_DISGUISE_STATE = EntityDataManager.defineId(Lurker.class, AccessModDataSerializers.getSerializer(AccessModDataSerializers.DISGUISE_STATE));
 
+    private static final DataParameter<Boolean> DATA_SLEEPING = EntityDataManager.defineId(Lurker.class, DataSerializers.BOOLEAN);
     private int attackAnimationTick;
     private LurkerAttackType currentAttackType;
 
@@ -95,6 +99,7 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
         this.goalSelector.addGoal(0, new RevealingGoal<>(this, REVEAL_ANIMATION_LENGTH));
         this.goalSelector.addGoal(0, new DisguisingGoal<>(this, DISGUISE_ANIMATION_LENGTH, Lurker::getRandomEntityType));
         this.goalSelector.addGoal(1, new StalkWhileDisguisedGoal<>(this, 1.0D, CLOSE_ENOUGH_TO_REVEAL));
+        this.goalSelector.addGoal(2, new SleepGoal<>(this, 140));
         this.goalSelector.addGoal(5, new ConditionalGoal<>(Lurker::canUseMelee, this, new AnimatableMeleeAttackGoal<Lurker, LurkerAttackType>(this, Lurker::pickAttackType, 1.0D, false), true));
         this.goalSelector.addGoal(6, new AttackTurtleEggGoal(this, 1.0D, 3));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
@@ -129,6 +134,7 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
         super.defineSynchedData();
         this.entityData.define(DATA_ATTACK_TYPE_ID, (byte)0);
         this.entityData.define(DATA_DISGUISE_STATE, DisguiseState.REVEALED);
+        this.entityData.define(DATA_SLEEPING, false);
     }
 
     @Override
@@ -187,6 +193,12 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     @Override
     public void tick() {
         super.tick();
+        if (this.isEffectiveAi()) {
+            boolean flag = this.isInWater();
+            if (flag || this.getTarget() != null) {
+                this.setSleepingMob(false);
+            }
+        }
         if(!this.level.isClientSide){
             if(this.isDisguised() && this.tickCount % 100 == 0){
                 Vector3d vector3d = this.getDeltaMovement();
@@ -222,12 +234,24 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     @Override
     public void addAdditionalSaveData(CompoundNBT pCompound) {
         super.addAdditionalSaveData(pCompound);
+        this.writeSleepingNBT(pCompound);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundNBT pCompound) {
         super.readAdditionalSaveData(pCompound);
         this.readDisguiseState(pCompound);
+        this.readSleepingNBT(pCompound);
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        if (this.isSleepingMob() || this.isImmobile()) {
+            this.jumping = false;
+            this.xxa = 0.0F;
+            this.zza = 0.0F;
+        }
     }
 
     /**
@@ -248,7 +272,9 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
             event.getController().setAnimation(REVEAL_ANIM);
         }
         // We are revealed, so check revealed animations
-        else if(this.isAttackAnimationInProgress()){
+        else if(this.isSleepingMob()){
+            event.getController().setAnimation(SLEEP_ANIM);
+        } else if(this.isAttackAnimationInProgress()){
             switch (this.getCurrentAttackType()){
                 case SLASH:
                     event.getController().setAnimation(ATTACK_ANIM);
@@ -335,6 +361,27 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     @Override
     public boolean wantsToReveal() {
         if(this.getLastHurtByMob() != null) return true;
-        return this.getTarget() != null && this.closerThan(this.getTarget(), CLOSE_ENOUGH_TO_REVEAL);
+        if(this.getTarget() != null && this.closerThan(this.getTarget(), CLOSE_ENOUGH_TO_REVEAL)) return true;
+        return !this.level.canSeeSky(this.blockPosition()) && this.wantsToSleep();
+    }
+
+    @Override
+    public void setSleepingMob(boolean sleeping) {
+        this.entityData.set(DATA_SLEEPING, sleeping);
+    }
+
+    @Override
+    public boolean isSleepingMob() {
+        return this.entityData.get(DATA_SLEEPING);
+    }
+
+    @Override
+    public boolean wantsToSleep() {
+        if (this.level.getBrightness(LightType.SKY, this.blockPosition()) >= 32) {
+            return false;
+        } else {
+            int localBrightness = this.level.isThundering() ? this.level.getMaxLocalRawBrightness(this.blockPosition(), 10) : this.level.getMaxLocalRawBrightness(this.blockPosition());
+            return localBrightness < 8;
+        }
     }
 }
