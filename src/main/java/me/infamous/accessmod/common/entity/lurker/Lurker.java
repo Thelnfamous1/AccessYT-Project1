@@ -9,6 +9,7 @@ import me.infamous.accessmod.common.entity.ai.disguise.AnimatableDisguise;
 import me.infamous.accessmod.common.entity.ai.disguise.DisguisingGoal;
 import me.infamous.accessmod.common.entity.ai.disguise.RevealingGoal;
 import me.infamous.accessmod.common.entity.ai.disguise.StalkWhileDisguisedGoal;
+import me.infamous.accessmod.common.entity.ai.sleep.FindShelterGoal;
 import me.infamous.accessmod.common.entity.ai.sleep.SleepGoal;
 import me.infamous.accessmod.common.entity.ai.sleep.SleepingMob;
 import me.infamous.accessmod.common.registry.AccessModDataSerializers;
@@ -99,7 +100,8 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
         this.goalSelector.addGoal(0, new RevealingGoal<>(this, REVEAL_ANIMATION_LENGTH));
         this.goalSelector.addGoal(0, new DisguisingGoal<>(this, DISGUISE_ANIMATION_LENGTH, Lurker::getRandomEntityType));
         this.goalSelector.addGoal(1, new StalkWhileDisguisedGoal<>(this, 1.0D, CLOSE_ENOUGH_TO_REVEAL));
-        this.goalSelector.addGoal(2, new SleepGoal<>(this, 140));
+        this.goalSelector.addGoal(2, new FindShelterGoal<>(this, 1.0D, 100, false));
+        this.goalSelector.addGoal(3, new SleepGoal<>(this, 140));
         this.goalSelector.addGoal(5, new ConditionalGoal<>(Lurker::canUseMelee, this, new AnimatableMeleeAttackGoal<Lurker, LurkerAttackType>(this, Lurker::pickAttackType, 1.0D, false), true));
         this.goalSelector.addGoal(6, new AttackTurtleEggGoal(this, 1.0D, 3));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomWalkingGoal(this, 1.0D));
