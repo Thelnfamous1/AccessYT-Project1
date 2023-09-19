@@ -51,6 +51,7 @@ import software.bernie.geckolib3.core.manager.AnimationData;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
 import software.bernie.geckolib3.util.GeckoLibUtil;
 
+import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -147,29 +148,29 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
         }
     }
 
-    private Optional<SoundEvent> getSoundFromDisguise(Function<MobEntity, SoundEvent> soundGetter){
+    private Optional<SoundEvent> getSoundFromDisguise(Function<MobEntity, SoundEvent> soundGetter, @Nullable SoundEvent defaultSound){
         if(AnimatableDisguise.entityDisguise(this).isDisguised()){
             Entity disguiseEntity = AnimatableDisguise.entityDisguise(this).getDisguiseEntity();
             if(disguiseEntity instanceof MobEntity){
                 return Optional.ofNullable(soundGetter.apply(((MobEntity) disguiseEntity)));
             }
         }
-        return Optional.empty();
+        return Optional.ofNullable(defaultSound);
     }
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return this.getSoundFromDisguise(m -> ((MobAccessor)m).callGetAmbientSound()).orElse(SoundEvents.ZOMBIE_AMBIENT);
+        return this.getSoundFromDisguise(m -> ((MobAccessor)m).callGetAmbientSound(), SoundEvents.ZOMBIE_AMBIENT).orElse(null);
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource pDamageSource) {
-        return this.getSoundFromDisguise(m -> ((LivingEntityAccessor)m).callGetHurtSound(pDamageSource)).orElse(SoundEvents.ZOMBIE_HURT);
+        return this.getSoundFromDisguise(m -> ((LivingEntityAccessor)m).callGetHurtSound(pDamageSource), SoundEvents.ZOMBIE_HURT).orElse(null);
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return this.getSoundFromDisguise(m -> ((LivingEntityAccessor)m).callGetDeathSound()).orElse(SoundEvents.ZOMBIE_DEATH);
+        return this.getSoundFromDisguise(m -> ((LivingEntityAccessor)m).callGetDeathSound(), SoundEvents.ZOMBIE_DEATH).orElse(null);
     }
 
     @Override
