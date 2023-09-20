@@ -1,6 +1,9 @@
 package me.infamous.accessmod.common.events;
 
 import me.infamous.accessmod.AccessMod;
+import me.infamous.accessmod.common.capability.SoulsCapability;
+import me.infamous.accessmod.common.capability.SoulsCapabilityImpl;
+import me.infamous.accessmod.common.capability.SoulsCapabilityStorage;
 import me.infamous.accessmod.common.entity.dune.Dune;
 import me.infamous.accessmod.common.entity.lurker.Lurker;
 import me.infamous.accessmod.common.network.AccessModNetwork;
@@ -9,6 +12,7 @@ import me.infamous.accessmod.common.registry.AccessModLootFunctions;
 import net.minecraft.entity.EntitySpawnPlacementRegistry;
 import net.minecraft.entity.monster.MonsterEntity;
 import net.minecraft.world.gen.Heightmap;
+import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -18,7 +22,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 public class ModEventHandler {
 
     @SubscribeEvent
-    public static void onClientSetup(EntityAttributeCreationEvent event) {
+    public static void onAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(AccessModEntityTypes.DUNE.get(), Dune.createAttributes().build());
         event.put(AccessModEntityTypes.LURKER.get(), Lurker.createAttributes().build());
     }
@@ -38,6 +42,7 @@ public class ModEventHandler {
                     Heightmap.Type.MOTION_BLOCKING_NO_LEAVES,
                     MonsterEntity::checkMonsterSpawnRules);
             AccessModLootFunctions.register();
+            CapabilityManager.INSTANCE.register(SoulsCapability.class, new SoulsCapabilityStorage(), SoulsCapabilityImpl::new);
         });
     }
 }

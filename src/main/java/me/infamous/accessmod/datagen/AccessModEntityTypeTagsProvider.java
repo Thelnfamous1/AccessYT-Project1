@@ -22,5 +22,12 @@ public class AccessModEntityTypeTagsProvider extends EntityTypeTagsProvider {
         this.tag(AccessModUtil.LURKER_DISGUISES_AS).add(
                 EntityType.PIG, EntityType.COW, EntityType.CHICKEN,
                 EntityType.BEE, EntityType.SHEEP, EntityType.PARROT);
+        this.tag(AccessModUtil.SCYTHE_CAN_HARVEST_SOUL).add(
+                EntityType.ZOMBIE, EntityType.DROWNED, EntityType.HUSK,
+                EntityType.ZOMBIE_VILLAGER,
+                EntityType.SKELETON, EntityType.STRAY, EntityType.WITHER_SKELETON,
+                EntityType.ZOMBIFIED_PIGLIN, EntityType.ZOGLIN);
+        this.tag(AccessModUtil.SCYTHE_CAN_HARVEST_SOUL_LIMITED).add(
+                EntityType.WITHER);
     }
 }

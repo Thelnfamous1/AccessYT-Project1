@@ -8,6 +8,7 @@
     "AbstractBlockStateMixin",
     "DesertWellsFeatureMixin",
     "EntityMixin",
+    "EntityPredicateMixin",
     "GlassBottleItemMixin",
     "LivingEntityAccessor",
     "LivingEntityMixin",

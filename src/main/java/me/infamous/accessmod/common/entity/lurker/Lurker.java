@@ -38,7 +38,6 @@ import net.minecraft.util.DamageSource;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.LightType;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
@@ -203,17 +202,8 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
             }
         }
         if(!this.level.isClientSide){
-            if(this.isDisguised() && this.tickCount % 100 == 0){
-                Vector3d vector3d = this.getDeltaMovement();
-                ((ServerWorld)this.level).sendParticles(ParticleTypes.SMOKE,
-                        this.getX() + (this.random.nextDouble() - 0.5D) * (double)this.getBbWidth(),
-                        this.getY() + 0.1D,
-                        this.getZ() + (this.random.nextDouble() - 0.5D) * (double)this.getBbWidth(),
-                        0,
-                        vector3d.x * -0.2D,
-                        0.1D,
-                        vector3d.z * -0.2D,
-                        1.0D);
+            if(this.isDisguised() && this.tickCount % 50 == 0){
+                AccessModUtil.sendParticle((ServerWorld) this.level, ParticleTypes.SMOKE, this);
             }
         }
     }

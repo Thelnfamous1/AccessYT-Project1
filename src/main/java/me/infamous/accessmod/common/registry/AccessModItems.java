@@ -1,6 +1,7 @@
 package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
+import me.infamous.accessmod.common.item.SoulScytheItem;
 import ovh.corail.flyingthings.item.ItemMagicCarpet;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
@@ -23,6 +24,8 @@ public class AccessModItems {
     public static final RegistryObject<Item> LURKER_SPAWN_EGG = ITEMS.register("lurker_spawn_egg",
             () -> new ForgeSpawnEggItem(AccessModEntityTypes.LURKER, 12698049, 4802889,
                     (new Item.Properties()).tab(ItemGroup.TAB_MISC)));
+
+    public static final RegistryObject<Item> SCYTHE = ITEMS.register("scythe", () -> new SoulScytheItem(new Item.Properties().tab(ItemGroup.TAB_COMBAT).durability(250)));
 
     public static void register(IEventBus modEventBus){
         ITEMS.register(modEventBus);

@@ -25,6 +25,14 @@ public class AccessModEntityLootTables extends EntityLootTables {
                                 .when(KilledByPlayer.killedByPlayer())
                         )
         ));
+        this.add(AccessModEntityTypes.LURKER.get(), LootTable.lootTable().withPool(
+                LootPool.lootPool()
+                        .setRolls(ConstantRange.exactly(1))
+                        .add(ItemLootEntry.lootTableItem(AccessModItems.SCYTHE.get())
+                                .apply(SetCount.setCount(ConstantRange.exactly(1)))
+                                .when(KilledByPlayer.killedByPlayer())
+                        )
+        ));
     }
 
     @Override

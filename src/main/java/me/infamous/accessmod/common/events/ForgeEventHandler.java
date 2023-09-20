@@ -2,13 +2,20 @@ package me.infamous.accessmod.common.events;
 
 import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.common.AccessModUtil;
+import me.infamous.accessmod.common.capability.SoulsCapabilityProvider;
+import me.infamous.accessmod.common.item.SoulScytheItem;
 import me.infamous.accessmod.common.network.AccessModNetwork;
 import me.infamous.accessmod.common.network.ServerboundDuneJumpPacket;
 import me.infamous.accessmod.duck.DuneSinker;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.world.server.ServerWorld;
+import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
@@ -39,6 +46,36 @@ public class ForgeEventHandler {
         if(AccessModUtil.isFromDesertWell(event.getItem())){
             if(!event.getEntityLiving().level.isClientSide){
                 AccessModUtil.summonDune(event.getEntityLiving(), (ServerWorld) event.getEntityLiving().level);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    static void onEntityCapabilityAttach(AttachCapabilitiesEvent<ItemStack> event){
+        if(event.getObject().getItem() instanceof SoulScytheItem){
+            final SoulsCapabilityProvider provider = new SoulsCapabilityProvider();
+            event.addCapability(SoulsCapabilityProvider.IDENTIFIER, provider);
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    static void onKillEntity(LivingDeathEvent event){
+        if(event.isCanceled()) return;
+        LivingEntity died = event.getEntityLiving();
+        if(died.level.isClientSide) return;
+
+        if(SoulScytheItem.canHarvestSoul(died)){
+            if(event.getSource().getDirectEntity() instanceof LivingEntity){
+                LivingEntity attacker = (LivingEntity) event.getSource().getDirectEntity();
+                if(attacker.getMainHandItem().getItem() instanceof SoulScytheItem){
+                    SoulScytheItem.getSouls(attacker.getMainHandItem()).ifPresent(souls -> {
+                        if(souls.addSummon(died.getType())){
+                            AccessMod.LOGGER.info("Added {} to the scythe held by {}", died.getType(), event.getSource().getDirectEntity());
+                        } else{
+                            AccessMod.LOGGER.info("Could not add {} to the scythe held by {}", died.getType(), event.getSource().getDirectEntity());
+                        }
+                    });
+                }
             }
         }
     }

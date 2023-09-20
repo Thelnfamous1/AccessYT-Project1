@@ -10,6 +10,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.particles.IParticleData;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.tags.ITag;
 import net.minecraft.util.ResourceLocation;
@@ -23,6 +24,8 @@ public class AccessModUtil {
 
 
     public static final ITag.INamedTag<EntityType<?>> LURKER_DISGUISES_AS = EntityTypeTags.createOptional(new ResourceLocation(AccessMod.MODID, "lurker_disguises_as"));
+    public static final ITag.INamedTag<EntityType<?>> SCYTHE_CAN_HARVEST_SOUL = EntityTypeTags.createOptional(new ResourceLocation(AccessMod.MODID, "scythe_can_harvest_soul"));
+    public static final ITag.INamedTag<EntityType<?>> SCYTHE_CAN_HARVEST_SOUL_LIMITED = EntityTypeTags.createOptional(new ResourceLocation(AccessMod.MODID, "scythe_can_harvest_soul_limited"));
 
     public static void handleDesertWellFillBottle(ItemStack stack, World world, PlayerEntity player) {
         if(world instanceof ServerWorld){
@@ -76,6 +79,19 @@ public class AccessModUtil {
         dune.setDigState(Digger.DigState.BURIED);
         dune.finalizeSpawn(serverWorld, serverWorld.getCurrentDifficultyAt(spawnPos), SpawnReason.MOB_SUMMONED, null, null);
         serverWorld.addFreshEntityWithPassengers(dune);
+    }
+
+    public static void sendParticle(ServerWorld world, IParticleData particleType, LivingEntity entity){
+        Vector3d deltaMovement = entity.getDeltaMovement();
+        world.sendParticles(particleType,
+                entity.getX() + (entity.getRandom().nextDouble() - 0.5D) * (double)entity.getBbWidth(),
+                entity.getY() + 0.1D,
+                entity.getZ() + (entity.getRandom().nextDouble() - 0.5D) * (double)entity.getBbWidth(),
+                0,
+                deltaMovement.x * -0.2D,
+                0.1D,
+                deltaMovement.z * -0.2D,
+                1.0D);
     }
 
 }
