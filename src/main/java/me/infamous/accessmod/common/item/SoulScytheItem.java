@@ -5,6 +5,8 @@ import com.google.common.collect.Multimap;
 import me.infamous.accessmod.common.AccessModUtil;
 import me.infamous.accessmod.common.capability.SoulsCapability;
 import me.infamous.accessmod.common.capability.SoulsCapabilityProvider;
+import me.infamous.accessmod.common.network.AccessModNetwork;
+import me.infamous.accessmod.common.network.ClientboundSoulScythePacket;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.FlowingFluidBlock;
 import net.minecraft.entity.Entity;
@@ -13,10 +15,12 @@ import net.minecraft.entity.ai.attributes.Attribute;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUseContext;
+import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.stats.Stats;
 import net.minecraft.util.ActionResult;
@@ -27,8 +31,13 @@ import net.minecraft.util.math.*;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.fml.network.PacketDistributor;
+
+import javax.annotation.Nullable;
 
 public class SoulScytheItem extends Item {
+    private static final String BASE_NBT_TAG = "base";
+    private static final String CAPABILITY_NBT_TAG = "cap";
     private final Multimap<Attribute, AttributeModifier> defaultModifiers;
 
     private static final int SUMMON_DAMAGE = 3;
@@ -101,7 +110,7 @@ public class SoulScytheItem extends Item {
                 spawnPos = blockpos.relative(direction);
             }
 
-            if(player != null && spawnSummon(player, world, itemstack, spawnPos)){
+            if(player != null && spawnSummon(player, hand, world, itemstack, spawnPos)){
                 AccessModUtil.sendParticle((ServerWorld) world, ParticleTypes.SOUL, player);
                 itemstack.hurtAndBreak(SUMMON_DAMAGE, player, (p) -> p.broadcastBreakEvent(hand));
             }
@@ -110,11 +119,18 @@ public class SoulScytheItem extends Item {
         }
     }
 
-    private static boolean spawnSummon(LivingEntity summoner, World world, ItemStack itemstack, BlockPos spawnPos) {
+    private static boolean spawnSummon(PlayerEntity summoner, Hand hand, World world, ItemStack itemstack, BlockPos spawnPos) {
         LazyOptional<SoulsCapability> maybeSouls = getSouls(itemstack);
         if(maybeSouls.isPresent()){
             SoulsCapability souls = maybeSouls.orElse(null);
             Entity summon = souls.summon(summoner, world);
+
+            if(summoner instanceof ServerPlayerEntity){
+                ServerPlayerEntity summonerPlayer = (ServerPlayerEntity) summoner;
+                int slot = hand == Hand.MAIN_HAND ? summonerPlayer.inventory.selected : 40;
+                AccessModNetwork.SYNC_CHANNEL.send(PacketDistributor.PLAYER.with(() -> summonerPlayer), new ClientboundSoulScythePacket(itemstack, slot));
+            }
+
             if(summon != null){
                 summon.moveTo((double) spawnPos.getX() + 0.5D, spawnPos.getY(), (double) spawnPos.getZ() + 0.5D, MathHelper.wrapDegrees(world.random.nextFloat() * 360.0F), 0.0F);
                 ((ServerWorld) world).addFreshEntityWithPassengers(summon);
@@ -138,7 +154,7 @@ public class SoulScytheItem extends Item {
             if (!(pLevel.getBlockState(spawnPos).getBlock() instanceof FlowingFluidBlock)) {
                 return ActionResult.pass(itemstack);
             } else if (pLevel.mayInteract(pPlayer, spawnPos) && pPlayer.mayUseItemAt(spawnPos, blockraytraceresult.getDirection(), itemstack)) {
-                if (!spawnSummon(pPlayer, pLevel, itemstack, spawnPos)) {
+                if (!spawnSummon(pPlayer, pHand, pLevel, itemstack, spawnPos)) {
                     return ActionResult.pass(itemstack);
                 } else {
                     AccessModUtil.sendParticle((ServerWorld) pLevel, ParticleTypes.SOUL, pPlayer);
@@ -152,4 +168,33 @@ public class SoulScytheItem extends Item {
         }
     }
 
+    @Nullable
+    @Override
+    public CompoundNBT getShareTag(ItemStack stack) {
+        CompoundNBT baseTag = stack.getTag();
+        CompoundNBT shareTag = super.getShareTag(stack);
+        SoulsCapability souls = getSouls(stack).orElse(null);
+        CompoundNBT capabilityTag = souls.serializeNBT();
+        CompoundNBT combinedTag = new CompoundNBT();
+        if (baseTag != null) {
+            combinedTag.put(BASE_NBT_TAG, baseTag);
+        }
+        if (capabilityTag != null) {
+            combinedTag.put(CAPABILITY_NBT_TAG, capabilityTag);
+        }
+        return shareTag;
+    }
+
+    @Override
+    public void readShareTag(ItemStack stack, @Nullable CompoundNBT nbt) {
+        if (nbt == null) {
+            stack.setTag(null);
+            return;
+        }
+        CompoundNBT baseTag = nbt.getCompound(BASE_NBT_TAG);              // empty if not found
+        CompoundNBT capabilityTag = nbt.getCompound(CAPABILITY_NBT_TAG); // empty if not found
+        stack.setTag(baseTag);
+        SoulsCapability souls = getSouls(stack).orElse(null);
+        souls.deserializeNBT(capabilityTag);
+    }
 }

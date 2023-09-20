@@ -1,15 +1,11 @@
 package me.infamous.accessmod.common.capability;
 
 import me.infamous.accessmod.common.AccessModUtil;
-import me.infamous.accessmod.common.entity.ai.summonable.FollowSummonerGoal;
-import me.infamous.accessmod.common.entity.ai.summonable.SummonerHurtByTargetGoal;
-import me.infamous.accessmod.common.entity.ai.summonable.SummonerHurtTargetGoal;
 import me.infamous.accessmod.duck.Summonable;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
-import net.minecraft.pathfinding.FlyingPathNavigator;
 import net.minecraft.world.World;
 
 import javax.annotation.Nullable;
@@ -36,9 +32,6 @@ public class SoulsCapabilityImpl implements SoulsCapability {
         if(summoned instanceof MobEntity){
             MobEntity summonedMob = (MobEntity) summoned;
             Summonable.cast(summonedMob).setSummonerUUID(summoner.getUUID());
-            summonedMob.goalSelector.addGoal(1, new FollowSummonerGoal(summonedMob, 1.0D, 2, 10, summonedMob.getNavigation() instanceof FlyingPathNavigator));
-            summonedMob.targetSelector.addGoal(1, new SummonerHurtByTargetGoal(summonedMob));
-            summonedMob.targetSelector.addGoal(2, new SummonerHurtTargetGoal(summonedMob));
         }
         return summoned;
     }
@@ -55,6 +48,12 @@ public class SoulsCapabilityImpl implements SoulsCapability {
         }
     }
 
+    @Override
+    public void clearAllSummons() {
+        this.souls.clear();
+        this.counts.clear();
+    }
+
     private static int getSummonLimit(EntityType<?> type) {
         return type.is(AccessModUtil.SCYTHE_CAN_HARVEST_SOUL_LIMITED) ? 1 : type.is(AccessModUtil.SCYTHE_CAN_HARVEST_SOUL) ? 5 : 0;
     }
@@ -63,4 +62,10 @@ public class SoulsCapabilityImpl implements SoulsCapability {
     public Iterator<EntityType<?>> getIterator() {
         return this.souls.iterator();
     }
+
+    @Override
+    public int getTotalSouls() {
+        return this.souls.size();
+    }
+
 }

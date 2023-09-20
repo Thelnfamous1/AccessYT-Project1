@@ -3,16 +3,25 @@ package me.infamous.accessmod.common.events;
 import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.common.AccessModUtil;
 import me.infamous.accessmod.common.capability.SoulsCapabilityProvider;
+import me.infamous.accessmod.common.entity.ai.summonable.FollowSummonerGoal;
+import me.infamous.accessmod.common.entity.ai.summonable.SummonerHurtByTargetGoal;
+import me.infamous.accessmod.common.entity.ai.summonable.SummonerHurtTargetGoal;
 import me.infamous.accessmod.common.item.SoulScytheItem;
 import me.infamous.accessmod.common.network.AccessModNetwork;
 import me.infamous.accessmod.common.network.ServerboundDuneJumpPacket;
 import me.infamous.accessmod.duck.DuneSinker;
+import me.infamous.accessmod.duck.Summonable;
+import me.infamous.accessmod.mixin.GoalSelectorAccesor;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.item.ItemStack;
+import net.minecraft.pathfinding.FlyingPathNavigator;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -51,7 +60,7 @@ public class ForgeEventHandler {
     }
 
     @SubscribeEvent
-    static void onEntityCapabilityAttach(AttachCapabilitiesEvent<ItemStack> event){
+    static void onItemCapabilityAttach(AttachCapabilitiesEvent<ItemStack> event){
         if(event.getObject().getItem() instanceof SoulScytheItem){
             final SoulsCapabilityProvider provider = new SoulsCapabilityProvider();
             event.addCapability(SoulsCapabilityProvider.IDENTIFIER, provider);
@@ -68,15 +77,27 @@ public class ForgeEventHandler {
             if(event.getSource().getDirectEntity() instanceof LivingEntity){
                 LivingEntity attacker = (LivingEntity) event.getSource().getDirectEntity();
                 if(attacker.getMainHandItem().getItem() instanceof SoulScytheItem){
-                    SoulScytheItem.getSouls(attacker.getMainHandItem()).ifPresent(souls -> {
-                        if(souls.addSummon(died.getType())){
-                            AccessMod.LOGGER.info("Added {} to the scythe held by {}", died.getType(), event.getSource().getDirectEntity());
-                        } else{
-                            AccessMod.LOGGER.info("Could not add {} to the scythe held by {}", died.getType(), event.getSource().getDirectEntity());
-                        }
-                    });
+                    SoulScytheItem.getSouls(attacker.getMainHandItem()).ifPresent(souls -> souls.addSummon(died.getType()));
                 }
             }
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    static void onEntityJoinWorld(EntityJoinWorldEvent event){
+        if(event.getWorld().isClientSide) return;
+        if(event.isCanceled()) return;
+
+        if(event.getEntity() instanceof MobEntity && Summonable.cast((MobEntity)event.getEntity()).isSummoned()){
+            MobEntity summonedMob = (MobEntity) event.getEntity();
+            int followPriority = ((GoalSelectorAccesor)summonedMob.goalSelector).accessmod_getAvailableGoals()
+                    .stream()
+                    .filter(pg -> pg.getGoal() instanceof MeleeAttackGoal)
+                    .map(pg -> pg.getPriority() + 1).findFirst() // 1 more than the attack goal's priority, so it runs after it
+                    .orElse(6); // 6 is the priority used by the Wolf's FollowOwnerGoal
+            summonedMob.goalSelector.addGoal(followPriority, new FollowSummonerGoal(summonedMob, 1.0D, 2, 10, summonedMob.getNavigation() instanceof FlyingPathNavigator));
+            summonedMob.targetSelector.addGoal(1, new SummonerHurtByTargetGoal(summonedMob)); // 1 is the priority used by the Wolf's OwnerHurtByTargetGoal
+            summonedMob.targetSelector.addGoal(2, new SummonerHurtTargetGoal(summonedMob)); // 2 is the priority used by the Wolf's OwnerHurtTargetGoal
         }
     }
 

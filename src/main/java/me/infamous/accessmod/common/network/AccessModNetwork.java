@@ -22,5 +22,6 @@ public class AccessModNetwork {
         SYNC_CHANNEL.registerMessage(INDEX++, ClientboundDuneSinkPacket.class, ClientboundDuneSinkPacket::encode, ClientboundDuneSinkPacket::new, ClientboundDuneSinkPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         SYNC_CHANNEL.registerMessage(INDEX++, ServerboundDuneJumpPacket.class, ServerboundDuneJumpPacket::encode, ServerboundDuneJumpPacket::new, ServerboundDuneJumpPacket::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         SYNC_CHANNEL.registerMessage(INDEX++, ClientboundRevealPacket.class, ClientboundRevealPacket::encode, ClientboundRevealPacket::new, ClientboundRevealPacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        SYNC_CHANNEL.registerMessage(INDEX++, ClientboundSoulScythePacket.class, ClientboundSoulScythePacket::encode, ClientboundSoulScythePacket::new, ClientboundSoulScythePacket::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 }

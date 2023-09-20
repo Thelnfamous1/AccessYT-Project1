@@ -10,10 +10,13 @@
     "EntityMixin",
     "EntityPredicateMixin",
     "GlassBottleItemMixin",
+    "GoalSelectorAccesor",
     "LivingEntityAccessor",
     "LivingEntityMixin",
     "MobAccessor"
   ],
-  "client": [],
+  "client": [
+    "IngameGuiAccessor"
+  ],
   "minVersion": "0.8"
 }
