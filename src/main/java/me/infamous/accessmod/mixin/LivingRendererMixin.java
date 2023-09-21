@@ -35,7 +35,7 @@ public abstract class LivingRendererMixin<T extends LivingEntity> extends Entity
     constant = @Constant(floatValue = 1.0F, ordinal = 7))
     private float modifyRenderToBufferAlpha(float original, T pEntity){
         if(pEntity instanceof MobEntity && Summonable.cast((MobEntity) pEntity).isSummonedBy(Minecraft.getInstance().player)){
-            return 0.5F;
+            return 0.75F;
         }
         return original;
     }
