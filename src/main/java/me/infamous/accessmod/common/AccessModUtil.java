@@ -5,6 +5,8 @@ import me.infamous.accessmod.common.entity.ai.digger.Digger;
 import me.infamous.accessmod.common.entity.dune.Dune;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import me.infamous.accessmod.common.registry.AccessModPOITypes;
+import me.infamous.accessmod.mixin.EntityAccessor;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnReason;
@@ -81,12 +83,13 @@ public class AccessModUtil {
         serverWorld.addFreshEntityWithPassengers(dune);
     }
 
-    public static void sendParticle(ServerWorld world, IParticleData particleType, LivingEntity entity){
+    public static void sendParticle(ServerWorld world, IParticleData particleType, Entity entity){
         Vector3d deltaMovement = entity.getDeltaMovement();
+        EntityAccessor accessor = (EntityAccessor) entity;
         world.sendParticles(particleType,
-                entity.getX() + (entity.getRandom().nextDouble() - 0.5D) * (double)entity.getBbWidth(),
+                entity.getX() + (accessor.accessmod_getRandom().nextDouble() - 0.5D) * (double)entity.getBbWidth(),
                 entity.getY() + 0.1D,
-                entity.getZ() + (entity.getRandom().nextDouble() - 0.5D) * (double)entity.getBbWidth(),
+                entity.getZ() + (accessor.accessmod_getRandom().nextDouble() - 0.5D) * (double)entity.getBbWidth(),
                 0,
                 deltaMovement.x * -0.2D,
                 0.1D,

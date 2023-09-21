@@ -37,6 +37,7 @@ public abstract class MobEntityMixin extends LivingEntity implements Summonable 
     @Override
     public void setSummonerUUID(UUID summonerUUID) {
         this.summonerUUID = summonerUUID;
+        Summonable.syncSummonerUUID((MobEntity) (Object) this);
     }
 
     @Override
@@ -65,7 +66,7 @@ public abstract class MobEntityMixin extends LivingEntity implements Summonable 
         this.writeSummonableInfo(pCompound);
     }
 
-    @Inject(method = "tick", at = @At("RETURN"))
+    @Inject(method = "tick", at = @At("TAIL"))
     private void handleTick(CallbackInfo ci){
         if (this.hasLimitedLife && --this.limitedLifeTicks <= 0) {
             this.kill();

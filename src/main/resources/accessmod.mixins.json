@@ -7,6 +7,7 @@
   "mixins": [
     "AbstractBlockStateMixin",
     "DesertWellsFeatureMixin",
+    "EntityAccessor",
     "EntityMixin",
     "EntityPredicateMixin",
     "GlassBottleItemMixin",
@@ -17,7 +18,8 @@
     "MobEntityMixin"
   ],
   "client": [
-    "IngameGuiAccessor"
+    "IngameGuiAccessor",
+    "LivingRendererMixin"
   ],
   "minVersion": "0.8"
 }

@@ -1,10 +1,13 @@
 package me.infamous.accessmod.duck;
 
+import me.infamous.accessmod.common.network.AccessModNetwork;
+import me.infamous.accessmod.common.network.ClientboundSummonablePacket;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.network.PacketDistributor;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -16,6 +19,12 @@ public interface Summonable {
 
     static Summonable cast(MobEntity entity){
         return (Summonable) entity;
+    }
+
+    static void syncSummonerUUID(MobEntity mob) {
+        if(!mob.level.isClientSide){
+            AccessModNetwork.SYNC_CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> mob), new ClientboundSummonablePacket(mob, Summonable.cast(mob).getSummonerUUID()));
+        }
     }
 
     default boolean isSummoned() {

@@ -17,6 +17,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.item.ItemStack;
+import net.minecraft.particles.ParticleTypes;
 import net.minecraft.pathfinding.FlyingPathNavigator;
 import net.minecraft.util.Hand;
 import net.minecraft.world.server.ServerWorld;
@@ -26,6 +27,8 @@ import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
+import net.minecraftforge.event.entity.living.LivingExperienceDropEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
@@ -79,7 +82,10 @@ public class ForgeEventHandler {
             if(event.getSource().getDirectEntity() instanceof LivingEntity){
                 LivingEntity attacker = (LivingEntity) event.getSource().getDirectEntity();
                 if(attacker.getMainHandItem().getItem() instanceof SoulScytheItem){
-                    SoulScytheItem.getSouls(attacker.getMainHandItem()).ifPresent(souls -> souls.addSummon(died.getType(), attacker, Hand.MAIN_HAND));
+                    SoulScytheItem.getSouls(attacker.getMainHandItem()).ifPresent(souls -> {
+                        souls.addSummon(died.getType(), attacker, Hand.MAIN_HAND);
+                        AccessModUtil.sendParticle((ServerWorld) died.level, ParticleTypes.SOUL, died);
+                    });
                 }
             }
         }
@@ -109,6 +115,22 @@ public class ForgeEventHandler {
 
         if(event.getEntity() instanceof MobEntity && Summonable.cast(((MobEntity) event.getEntity())).isSummoned()){
             event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    static void onLivingDrops(LivingExperienceDropEvent event){
+        if(event.isCanceled()) return;
+
+        if(event.getEntity() instanceof MobEntity && Summonable.cast(((MobEntity) event.getEntity())).isSummoned()){
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    static void onStartTracking(PlayerEvent.StartTracking event){
+        if(event.getTarget() instanceof MobEntity && Summonable.cast((MobEntity) event.getTarget()).isSummoned()){
+            Summonable.syncSummonerUUID((MobEntity) event.getTarget());
         }
     }
 

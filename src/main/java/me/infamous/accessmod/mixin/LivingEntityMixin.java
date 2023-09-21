@@ -3,7 +3,6 @@ package me.infamous.accessmod.mixin;
 //import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 
 import me.infamous.accessmod.duck.DuneSinker;
-import me.infamous.accessmod.duck.Summonable;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
@@ -15,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LivingEntity.class)
-public abstract class LivingEntityMixin extends Entity implements DuneSinker, Summonable {
+public abstract class LivingEntityMixin extends Entity implements DuneSinker {
 
     @Shadow protected boolean jumping;
 

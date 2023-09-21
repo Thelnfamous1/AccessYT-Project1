@@ -28,6 +28,8 @@ import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.common.util.LazyOptional;
 
+import java.util.Optional;
+
 public class SoulScytheItem extends Item {
     private final Multimap<Attribute, AttributeModifier> defaultModifiers;
 
@@ -101,28 +103,30 @@ public class SoulScytheItem extends Item {
                 spawnPos = blockpos.relative(direction);
             }
 
-            if(player != null && spawnSummon(player, hand, world, itemstack, spawnPos)){
-                AccessModUtil.sendParticle((ServerWorld) world, ParticleTypes.SOUL, player);
-                itemstack.hurtAndBreak(SUMMON_DAMAGE, player, (p) -> p.broadcastBreakEvent(hand));
+            if(player != null){
+                Optional<Entity> maybeSummon = spawnSummon(player, hand, (ServerWorld) world, itemstack, spawnPos);
+                if(maybeSummon.isPresent()){
+                    AccessModUtil.sendParticle((ServerWorld) world, ParticleTypes.SOUL, maybeSummon.get());
+                    itemstack.hurtAndBreak(SUMMON_DAMAGE, player, (p) -> p.broadcastBreakEvent(hand));
+                }
             }
 
             return ActionResultType.CONSUME;
         }
     }
 
-    private static boolean spawnSummon(PlayerEntity summoner, Hand hand, World world, ItemStack itemstack, BlockPos spawnPos) {
+    private static Optional<Entity> spawnSummon(PlayerEntity summoner, Hand hand, ServerWorld serverWorld, ItemStack itemstack, BlockPos spawnPos) {
         LazyOptional<SoulsCapability> maybeSouls = getSouls(itemstack);
         if(maybeSouls.isPresent()){
             SoulsCapability souls = maybeSouls.orElse(null);
-            Entity summon = souls.summon(summoner, world, hand);
-
+            Entity summon = souls.summon(summoner, serverWorld, hand);
             if(summon != null){
-                summon.moveTo((double) spawnPos.getX() + 0.5D, spawnPos.getY(), (double) spawnPos.getZ() + 0.5D, MathHelper.wrapDegrees(world.random.nextFloat() * 360.0F), 0.0F);
-                ((ServerWorld) world).addFreshEntityWithPassengers(summon);
+                summon.moveTo((double) spawnPos.getX() + 0.5D, spawnPos.getY(), (double) spawnPos.getZ() + 0.5D, MathHelper.wrapDegrees(serverWorld.random.nextFloat() * 360.0F), 0.0F);
+                serverWorld.addFreshEntityWithPassengers(summon);
             }
-            return summon != null;
+            return Optional.ofNullable(summon);
         }
-        return false;
+        return Optional.empty();
     }
 
     @Override
@@ -139,10 +143,11 @@ public class SoulScytheItem extends Item {
             if (!(pLevel.getBlockState(spawnPos).getBlock() instanceof FlowingFluidBlock)) {
                 return ActionResult.pass(itemstack);
             } else if (pLevel.mayInteract(pPlayer, spawnPos) && pPlayer.mayUseItemAt(spawnPos, blockraytraceresult.getDirection(), itemstack)) {
-                if (!spawnSummon(pPlayer, pHand, pLevel, itemstack, spawnPos)) {
+                Optional<Entity> maybeSummon = spawnSummon(pPlayer, pHand, (ServerWorld) pLevel, itemstack, spawnPos);
+                if (!maybeSummon.isPresent()) {
                     return ActionResult.pass(itemstack);
                 } else {
-                    AccessModUtil.sendParticle((ServerWorld) pLevel, ParticleTypes.SOUL, pPlayer);
+                    AccessModUtil.sendParticle((ServerWorld) pLevel, ParticleTypes.SOUL, maybeSummon.get());
                     itemstack.hurtAndBreak(SUMMON_DAMAGE, pPlayer, (p) -> p.broadcastBreakEvent(pHand));
                     pPlayer.awardStat(Stats.ITEM_USED.get(this));
                     return ActionResult.consume(itemstack);

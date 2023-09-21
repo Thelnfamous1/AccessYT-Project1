@@ -11,7 +11,7 @@ import net.minecraftforge.fml.common.Mod;
 public class ForgeClientEventHandler {
 
     @SubscribeEvent
-    static void renderPost(RenderGameOverlayEvent.Post event){
+    static void renderOverlayPost(RenderGameOverlayEvent.Post event){
         if(event.getType() == RenderGameOverlayEvent.ElementType.HOTBAR){
             SoulsOverlay.renderSouls(event.getWindow().getGuiScaledWidth(), event.getWindow().getGuiScaledHeight(), event.getMatrixStack());
         }
