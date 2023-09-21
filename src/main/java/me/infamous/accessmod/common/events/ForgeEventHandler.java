@@ -18,11 +18,13 @@ import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.item.ItemStack;
 import net.minecraft.pathfinding.FlyingPathNavigator;
+import net.minecraft.util.Hand;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -77,7 +79,7 @@ public class ForgeEventHandler {
             if(event.getSource().getDirectEntity() instanceof LivingEntity){
                 LivingEntity attacker = (LivingEntity) event.getSource().getDirectEntity();
                 if(attacker.getMainHandItem().getItem() instanceof SoulScytheItem){
-                    SoulScytheItem.getSouls(attacker.getMainHandItem()).ifPresent(souls -> souls.addSummon(died.getType()));
+                    SoulScytheItem.getSouls(attacker.getMainHandItem()).ifPresent(souls -> souls.addSummon(died.getType(), attacker, Hand.MAIN_HAND));
                 }
             }
         }
@@ -98,6 +100,15 @@ public class ForgeEventHandler {
             summonedMob.goalSelector.addGoal(followPriority, new FollowSummonerGoal(summonedMob, 1.0D, 2, 10, summonedMob.getNavigation() instanceof FlyingPathNavigator));
             summonedMob.targetSelector.addGoal(1, new SummonerHurtByTargetGoal(summonedMob)); // 1 is the priority used by the Wolf's OwnerHurtByTargetGoal
             summonedMob.targetSelector.addGoal(2, new SummonerHurtTargetGoal(summonedMob)); // 2 is the priority used by the Wolf's OwnerHurtTargetGoal
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    static void onLivingDrops(LivingDropsEvent event){
+        if(event.isCanceled()) return;
+
+        if(event.getEntity() instanceof MobEntity && Summonable.cast(((MobEntity) event.getEntity())).isSummoned()){
+            event.setCanceled(true);
         }
     }
 

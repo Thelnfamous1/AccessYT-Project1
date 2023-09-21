@@ -1,11 +1,8 @@
 package me.infamous.accessmod.common.capability;
 
 import me.infamous.accessmod.common.AccessModUtil;
-import me.infamous.accessmod.duck.Summonable;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.MobEntity;
 import net.minecraft.world.World;
 
 import javax.annotation.Nullable;
@@ -18,7 +15,7 @@ public class SoulsCapabilityImpl implements SoulsCapability {
 
     @Nullable
     @Override
-    public Entity summon(LivingEntity summoner, World world) {
+    public Entity summon(World world) {
         EntityType<?> polledType = this.souls.poll();
         if(polledType == null){
             return null;
@@ -28,23 +25,15 @@ public class SoulsCapabilityImpl implements SoulsCapability {
         if(currentCount > 0){
             counts.put(polledType, currentCount - 1);
         }
-
-        if(summoned instanceof MobEntity){
-            MobEntity summonedMob = (MobEntity) summoned;
-            Summonable.cast(summonedMob).setSummonerUUID(summoner.getUUID());
-        }
         return summoned;
     }
 
     @Override
-    public boolean addSummon(EntityType<?> type) {
+    public void addSummon(EntityType<?> type) {
         Integer currentCount = this.counts.getOrDefault(type, 0);
         if(currentCount < getSummonLimit(type)){
             this.souls.add(type);
             this.counts.put(type, currentCount + 1);
-            return true;
-        } else{
-            return false;
         }
     }
 

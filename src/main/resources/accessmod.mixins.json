@@ -13,7 +13,8 @@
     "GoalSelectorAccesor",
     "LivingEntityAccessor",
     "LivingEntityMixin",
-    "MobAccessor"
+    "MobAccessor",
+    "MobEntityMixin"
   ],
   "client": [
     "IngameGuiAccessor"

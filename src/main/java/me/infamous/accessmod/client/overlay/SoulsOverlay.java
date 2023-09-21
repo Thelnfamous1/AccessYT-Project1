@@ -6,6 +6,7 @@ import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.common.capability.SoulsCapability;
 import me.infamous.accessmod.common.item.SoulScytheItem;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.AbstractGui;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileHelper;
 import net.minecraft.item.ItemStack;
@@ -43,7 +44,7 @@ public class SoulsOverlay{
         Minecraft.getInstance().gui.setBlitOffset(-90); // not sure what this is for, but the hotbar does this when rendering, and we are mimicking it
         int iconXPos = screenWidth / 2 + OFFHAND_SLOT_X_OFFSET + OFFHAND_SLOT_ICON_WIDTH;
         int iconYPos = screenHeight - OFFHAND_SLOT_Y_OFFSET;
-        Minecraft.getInstance().gui.blit(mStack, iconXPos, iconYPos, SOUL_ICON_U_OFFSET, SOUL_ICON_V_OFFSET, SOUL_ICON_WIDTH, SOUL_ICON_HEIGHT);
+        AbstractGui.blit(mStack, iconXPos, iconYPos, SOUL_ICON_U_OFFSET, SOUL_ICON_V_OFFSET, SOUL_ICON_WIDTH, SOUL_ICON_HEIGHT, 16, 16);
         Minecraft.getInstance().gui.setBlitOffset(blitOffsetO);
 
         // Render the total number of souls
