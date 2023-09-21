@@ -19,7 +19,8 @@
   ],
   "client": [
     "IngameGuiAccessor",
-    "LivingRendererMixin"
+    "LivingRendererMixin",
+    "WorldRendererMixin"
   ],
   "minVersion": "0.8"
 }
