@@ -103,7 +103,7 @@ public class ForgeEventHandler {
                     .filter(pg -> pg.getGoal() instanceof MeleeAttackGoal)
                     .map(pg -> pg.getPriority() + 1).findFirst() // 1 more than the attack goal's priority, so it runs after it
                     .orElse(6); // 6 is the priority used by the Wolf's FollowOwnerGoal
-            summonedMob.goalSelector.addGoal(followPriority, new FollowSummonerGoal(summonedMob, 1.0D, 2, 10, summonedMob.getNavigation() instanceof FlyingPathNavigator));
+            summonedMob.goalSelector.addGoal(followPriority, new FollowSummonerGoal(summonedMob, 1.0D, 10, 2, summonedMob.getNavigation() instanceof FlyingPathNavigator));
             summonedMob.targetSelector.addGoal(1, new SummonerHurtByTargetGoal(summonedMob)); // 1 is the priority used by the Wolf's OwnerHurtByTargetGoal
             summonedMob.targetSelector.addGoal(2, new SummonerHurtTargetGoal(summonedMob)); // 2 is the priority used by the Wolf's OwnerHurtTargetGoal
         }
