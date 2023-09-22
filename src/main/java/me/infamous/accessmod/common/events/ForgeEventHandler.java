@@ -1,5 +1,6 @@
 package me.infamous.accessmod.common.events;
 
+import com.google.common.collect.Maps;
 import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.common.AccessModUtil;
 import me.infamous.accessmod.common.capability.SoulsCapabilityProvider;
@@ -9,6 +10,7 @@ import me.infamous.accessmod.common.entity.ai.summonable.SummonerHurtTargetGoal;
 import me.infamous.accessmod.common.item.SoulScytheItem;
 import me.infamous.accessmod.common.network.AccessModNetwork;
 import me.infamous.accessmod.common.network.ServerboundDuneJumpPacket;
+import me.infamous.accessmod.common.spawner.LurkerSpawner;
 import me.infamous.accessmod.duck.DuneSinker;
 import me.infamous.accessmod.duck.Summonable;
 import me.infamous.accessmod.mixin.GoalSelectorAccesor;
@@ -19,8 +21,13 @@ import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.pathfinding.FlyingPathNavigator;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Hand;
+import net.minecraft.util.RegistryKey;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
+import net.minecraft.world.spawner.ISpecialSpawner;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
@@ -34,8 +41,34 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE, modid = AccessMod.MODID)
 public class ForgeEventHandler {
+    private static final Map<RegistryKey<World>, List<ISpecialSpawner>> CUSTOM_SPAWNERS = Maps.newLinkedHashMap();
+
+    @SubscribeEvent
+    static void onWorldTick(TickEvent.WorldTickEvent event){
+        if(event.world instanceof ServerWorld && event.phase == TickEvent.Phase.END){
+            ServerWorld serverLevel = (ServerWorld) event.world;
+            MinecraftServer server = serverLevel.getServer();
+            RegistryKey<World> dimension = serverLevel.dimension();
+            List<ISpecialSpawner> customSpawners = CUSTOM_SPAWNERS.computeIfAbsent(dimension, k -> {
+                List<ISpecialSpawner> spawners = new ArrayList<>();
+                if(k == World.OVERWORLD){
+                    spawners.add(new LurkerSpawner());
+                }
+                return spawners;
+            });
+            customSpawners.forEach(cs -> cs.tick(serverLevel, isSpawningMonsters(server), server.isSpawningAnimals()));
+        }
+    }
+
+    private static boolean isSpawningMonsters(MinecraftServer server) {
+        return server.getWorldData().getDifficulty() != Difficulty.PEACEFUL;
+    }
 
     /*
     @SubscribeEvent(priority = EventPriority.HIGH)
