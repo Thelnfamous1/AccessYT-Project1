@@ -25,5 +25,9 @@ public class AccessModLanguageProvider extends LanguageProvider {
          */
         this.addEntityType(AccessModEntityTypes.LURKER, "Lurker");
         this.add(AccessModItems.LURKER_SPAWN_EGG.get(), "Lurker Spawn Egg");
+        this.add(AccessModItems.SCYTHE.get(), "Scythe");
+
+        this.addEntityType(AccessModEntityTypes.GOBBLEFIN, "Gobblefin");
+        this.add(AccessModItems.GOBBLEFIN_SPAWN_EGG.get(), "Gobblefin Spawn Egg");
     }
 }

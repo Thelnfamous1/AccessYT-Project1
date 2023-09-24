@@ -1,10 +1,10 @@
 package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
-import me.infamous.accessmod.common.entity.lurker.Lurker;
-import ovh.corail.flyingthings.entity.EntityMagicCarpet;
 import me.infamous.accessmod.common.entity.dune.Dune;
 import me.infamous.accessmod.common.entity.dune.WrathfulDust;
+import me.infamous.accessmod.common.entity.gobblefin.Gobblefin;
+import me.infamous.accessmod.common.entity.lurker.Lurker;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.EntityType;
@@ -12,6 +12,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
+import ovh.corail.flyingthings.entity.EntityMagicCarpet;
 
 import java.util.stream.Collectors;
 
@@ -43,6 +44,10 @@ public class AccessModEntityTypes {
             EntityType.Builder.of(Lurker::new, EntityClassification.MONSTER)
                     .sized(1.0F, 3.4F)
                     .clientTrackingRange(8));
+
+    public static final RegistryObject<EntityType<Gobblefin>> GOBBLEFIN = register("gobblefin",
+            EntityType.Builder.of(Gobblefin::new, EntityClassification.WATER_CREATURE)
+                    .sized(4.0F, 2.0F));
 
 
     private static <T extends Entity> RegistryObject<EntityType<T>> register(String pKey, EntityType.Builder<T> pBuilder) {

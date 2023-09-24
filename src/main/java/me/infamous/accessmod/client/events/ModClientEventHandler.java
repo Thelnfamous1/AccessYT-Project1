@@ -2,6 +2,7 @@ package me.infamous.accessmod.client.events;
 
 import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.client.renderer.dune.DuneRenderer;
+import me.infamous.accessmod.client.renderer.gobblefin.GobblefinRenderer;
 import me.infamous.accessmod.client.renderer.lurker.LurkerRenderer;
 import ovh.corail.flyingthings.render.RenderMagicCarpet;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
@@ -25,5 +26,7 @@ public class ModClientEventHandler {
         RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.MAGIC_CARPET.get(), RenderMagicCarpet::new);
 
         RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.LURKER.get(), LurkerRenderer::new);
+
+        RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.GOBBLEFIN.get(), GobblefinRenderer::new);
     }
 }

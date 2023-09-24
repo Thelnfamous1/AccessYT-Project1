@@ -27,6 +27,10 @@ public class AccessModItems {
 
     public static final RegistryObject<Item> SCYTHE = ITEMS.register("scythe", () -> new SoulScytheItem(new Item.Properties().tab(ItemGroup.TAB_COMBAT).durability(250)));
 
+    public static final RegistryObject<Item> GOBBLEFIN_SPAWN_EGG = ITEMS.register("gobblefin_spawn_egg",
+            () -> new ForgeSpawnEggItem(AccessModEntityTypes.GOBBLEFIN, 2243405, 16382457,
+                    (new Item.Properties()).tab(ItemGroup.TAB_MISC)));
+
     public static void register(IEventBus modEventBus){
         ITEMS.register(modEventBus);
     }
