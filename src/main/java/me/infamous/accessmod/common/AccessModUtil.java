@@ -89,18 +89,18 @@ public class AccessModUtil {
         serverWorld.addFreshEntityWithPassengers(dune);
     }
 
-    public static void sendParticle(ServerWorld world, IParticleData particleType, Entity entity){
+    public static void sendParticle(ServerWorld world, IParticleData particleType, Entity entity, int pParticleCount, double pSpeed){
         Vector3d deltaMovement = entity.getDeltaMovement();
         EntityAccessor accessor = (EntityAccessor) entity;
         world.sendParticles(particleType,
                 entity.getX() + (accessor.accessmod_getRandom().nextDouble() - 0.5D) * (double)entity.getBbWidth(),
                 entity.getY() + 0.1D,
                 entity.getZ() + (accessor.accessmod_getRandom().nextDouble() - 0.5D) * (double)entity.getBbWidth(),
-                0,
+                pParticleCount,
                 deltaMovement.x * -0.2D,
                 0.1D,
                 deltaMovement.z * -0.2D,
-                1.0D);
+                pSpeed);
     }
 
     public static Vector3d getRandomNearbyPos(CreatureEntity creature) {

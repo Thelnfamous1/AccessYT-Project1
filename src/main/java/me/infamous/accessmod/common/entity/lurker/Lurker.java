@@ -196,14 +196,14 @@ public class Lurker extends MonsterEntity implements IAnimatable, AnimatableMele
     public void tick() {
         super.tick();
         if (this.isEffectiveAi()) {
-            boolean flag = this.isInWater();
-            if (flag || this.getTarget() != null) {
+            boolean inWater = this.isInWater();
+            if (inWater || this.getTarget() != null) {
                 this.setSleepingMob(false);
             }
         }
         if(!this.level.isClientSide){
             if(this.isDisguised() && this.tickCount % 50 == 0){
-                AccessModUtil.sendParticle((ServerWorld) this.level, ParticleTypes.SMOKE, this);
+                AccessModUtil.sendParticle((ServerWorld) this.level, ParticleTypes.SMOKE, this, 5, 0.15D);
             }
         }
     }

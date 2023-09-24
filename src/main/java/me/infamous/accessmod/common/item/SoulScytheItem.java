@@ -106,7 +106,7 @@ public class SoulScytheItem extends Item {
             if(player != null){
                 Optional<Entity> maybeSummon = spawnSummon(player, hand, (ServerWorld) world, itemstack, spawnPos);
                 if(maybeSummon.isPresent()){
-                    AccessModUtil.sendParticle((ServerWorld) world, ParticleTypes.SOUL, maybeSummon.get());
+                    AccessModUtil.sendParticle((ServerWorld) world, ParticleTypes.SOUL, maybeSummon.get(), 0, 1.0D);
                     itemstack.hurtAndBreak(SUMMON_DAMAGE, player, (p) -> p.broadcastBreakEvent(hand));
                 }
             }
@@ -147,7 +147,7 @@ public class SoulScytheItem extends Item {
                 if (!maybeSummon.isPresent()) {
                     return ActionResult.pass(itemstack);
                 } else {
-                    AccessModUtil.sendParticle((ServerWorld) pLevel, ParticleTypes.SOUL, maybeSummon.get());
+                    AccessModUtil.sendParticle((ServerWorld) pLevel, ParticleTypes.SOUL, maybeSummon.get(), 0, 1.0D);
                     itemstack.hurtAndBreak(SUMMON_DAMAGE, pPlayer, (p) -> p.broadcastBreakEvent(pHand));
                     pPlayer.awardStat(Stats.ITEM_USED.get(this));
                     return ActionResult.consume(itemstack);

@@ -1,27 +1,20 @@
 package me.infamous.accessmod.mixin;
 
-import me.infamous.accessmod.client.overlay.SoulsOverlay;
-import me.infamous.accessmod.duck.Summonable;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.IRenderTypeBuffer;
-import net.minecraft.client.renderer.OutlineLayerBuffer;
 import net.minecraft.client.renderer.RenderTypeBuffers;
 import net.minecraft.client.renderer.WorldRenderer;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.MobEntity;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 @Mixin(WorldRenderer.class)
 public class WorldRendererMixin {
 
     @Shadow @Final private RenderTypeBuffers renderBuffers;
+
+    /*
     @Unique
     private static boolean renderingOutlines;
+
 
     @ModifyVariable(method = "renderEntity", at = @At(value = "LOAD", ordinal = 0), ordinal = 0, argsOnly = true)
     private IRenderTypeBuffer modifyBuffer(IRenderTypeBuffer original, Entity pEntity){
@@ -46,4 +39,5 @@ public class WorldRendererMixin {
         renderingOutlines = false;
         return flag2;
     }
+     */
 }

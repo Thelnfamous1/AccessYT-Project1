@@ -5,6 +5,8 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -68,6 +70,16 @@ public abstract class MobEntityMixin extends LivingEntity implements Summonable 
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void handleTick(CallbackInfo ci){
+        if (this.level.isClientSide && this.summonerUUID != null && this.tickCount % 50 == 0) {
+            Vector3d vector3d = this.getDeltaMovement();
+            this.level.addParticle(ParticleTypes.SOUL,
+                    this.getX() + (this.random.nextDouble() - 0.5D) * (double)this.getBbWidth(),
+                    this.getY(0.5D),
+                    this.getZ() + (this.random.nextDouble() - 0.5D) * (double)this.getBbWidth(),
+                    vector3d.x * -0.2D,
+                    0.1D,
+                    vector3d.z * -0.2D);
+        }
         if (this.hasLimitedLife && --this.limitedLifeTicks <= 0) {
             this.kill();
         }

@@ -117,7 +117,7 @@ public class ForgeEventHandler {
                 if(attacker.getMainHandItem().getItem() instanceof SoulScytheItem){
                     SoulScytheItem.getSouls(attacker.getMainHandItem()).ifPresent(souls -> {
                         souls.addSummon(died.getType(), attacker, Hand.MAIN_HAND);
-                        AccessModUtil.sendParticle((ServerWorld) died.level, ParticleTypes.SOUL, died);
+                        AccessModUtil.sendParticle((ServerWorld) died.level, ParticleTypes.SOUL, died, 0, 1.0D);
                     });
                 }
             }
