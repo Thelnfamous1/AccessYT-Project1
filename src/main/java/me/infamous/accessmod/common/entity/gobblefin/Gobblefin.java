@@ -2,7 +2,7 @@ package me.infamous.accessmod.common.entity.gobblefin;
 
 import me.infamous.accessmod.common.AccessModUtil;
 import me.infamous.accessmod.common.entity.ai.InventoryHolder;
-import me.infamous.accessmod.common.entity.ai.EatItemsGoal;
+import me.infamous.accessmod.common.entity.ai.eater.EatItemsGoal;
 import me.infamous.accessmod.common.entity.ai.eater.Eater;
 import me.infamous.accessmod.common.registry.AccessModDataSerializers;
 import net.minecraft.entity.*;
@@ -14,7 +14,6 @@ import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.monster.GuardianEntity;
 import net.minecraft.entity.passive.WaterMobEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.EquipmentSlotType;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
@@ -25,10 +24,7 @@ import net.minecraft.particles.ParticleTypes;
 import net.minecraft.pathfinding.PathNavigator;
 import net.minecraft.pathfinding.SwimmerPathNavigator;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.RegistryKey;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.SoundEvents;
+import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
@@ -67,6 +63,8 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
 
     private static final DataParameter<EatState> DATA_EAT_STATE = EntityDataManager.defineId(Gobblefin.class, AccessModDataSerializers.getSerializer(AccessModDataSerializers.EAT_STATE));
     private final Inventory inventory = new Inventory(8);
+    private int throwUpTicks;
+
     public Gobblefin(EntityType<? extends Gobblefin> type, World world) {
         super(type, world);
         this.moveControl = new DolphinlikeMoveHelperController(this);
@@ -121,16 +119,16 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
         this.goalSelector.addGoal(0, new FindWaterGoal(this));
         //this.goalSelector.addGoal(1, new DolphinEntity.SwimToTreasureGoal(this));
         //this.goalSelector.addGoal(2, new DolphinEntity.SwimWithPlayerGoal(this, 4.0D));
+        this.goalSelector.addGoal(1, new PanicGoal(this, 1.2F));
+        this.goalSelector.addGoal(2, new EatItemsGoal<>(this, 20, 8, 100, 1.2F, SUCK_UP_DURATION, SWALLOW_DURATION));
         this.goalSelector.addGoal(4, new RandomSwimmingGoal(this, 1.0D, 10));
         this.goalSelector.addGoal(4, new LookRandomlyGoal(this));
         this.goalSelector.addGoal(5, new LookAtGoal(this, PlayerEntity.class, 6.0F));
-        this.goalSelector.addGoal(5, new DolphinlikeJumpGoal<>(this, 10, 0.6D, 0.7D));
-        this.goalSelector.addGoal(6, new MeleeAttackGoal(this, 1.2F, true));
-        this.goalSelector.addGoal(8, new EatItemsGoal<>(this, 20, 8, 100, 1.2F, SUCK_UP_DURATION, SWALLOW_DURATION, THROW_UP_DURATION));
+        //this.goalSelector.addGoal(5, new DolphinlikeJumpGoal<>(this, 10, 0.6D, 0.7D));
+        //this.goalSelector.addGoal(6, new MeleeAttackGoal(this, 1.2F, true));
         //this.goalSelector.addGoal(8, new FollowBoatGoal(this));
         this.goalSelector.addGoal(9, new AvoidEntityGoal<>(this, GuardianEntity.class, 8.0F, 1.0D, 1.0D));
-
-        this.targetSelector.addGoal(1, (new HurtByTargetGoal(this, GuardianEntity.class)).setAlertOthers());
+        //this.targetSelector.addGoal(1, (new HurtByTargetGoal(this, GuardianEntity.class)).setAlertOthers());
     }
 
     @Override
@@ -169,52 +167,19 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
     }
 
     @Override
-    public boolean canTakeItem(ItemStack pItemstack) {
-        EquipmentSlotType slotForItem = MobEntity.getEquipmentSlotForItem(pItemstack);
-        if (!this.getItemBySlot(slotForItem).isEmpty()) {
-            return false;
-        } else {
-            return slotForItem == EquipmentSlotType.MAINHAND && super.canTakeItem(pItemstack);
-        }
-    }
-
-    @Override
     public boolean wantsToPickUp(ItemStack stack) {
-        return ForgeEventFactory.getMobGriefingEvent(this.level, this) && this.canPickUpLoot() && this.canPutInMainhand(stack);
-    }
-
-    private boolean canPutInMainhand(ItemStack stack){
-        return true;
-    }
-
-    private boolean canPutInInventory(ItemStack stack) {
-        return this.getInventory().canAddItem(stack);
+        return ForgeEventFactory.getMobGriefingEvent(this.level, this) && this.canPickUpLoot();
     }
 
     @Override
-    protected void pickUpItem(ItemEntity pItemEntity) {
-        this.pickUpItemAndPutInMainhand(pItemEntity);
-    }
-
-    private void pickUpItemAndPutInMainhand(ItemEntity pItemEntity) {
-        if (this.getItemBySlot(EquipmentSlotType.MAINHAND).isEmpty()) {
-            ItemStack itemstack = pItemEntity.getItem();
-            if (this.canHoldItem(itemstack)) {
-                this.onItemPickup(pItemEntity);
-                this.setItemSlot(EquipmentSlotType.MAINHAND, itemstack);
-                this.handDropChances[EquipmentSlotType.MAINHAND.getIndex()] = 2.0F;
-                this.take(pItemEntity, itemstack.getCount());
-                pItemEntity.remove();
+    public void baseTick() {
+        super.baseTick();
+        if(this.throwUpTicks > 0){
+            this.throwUpTicks--;
+            if(this.throwUpTicks == 0 && !this.level.isClientSide && this.isThrowingUp()){
+                this.setMouthClosed();
             }
         }
-    }
-
-    private void pickupItemAndPutInInventory(ItemEntity pItemEntity) {
-        this.onItemPickup(pItemEntity);
-        this.take(pItemEntity, 1);
-        ItemStack oneItem = AccessModUtil.removeOneItemFromItemEntity(pItemEntity);
-        ItemStack remainder = this.getInventory().addItem(oneItem);
-        AccessModUtil.throwItemsTowardRandomPos(this, Collections.singletonList(remainder));
     }
 
     @Override
@@ -317,6 +282,17 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
         return true;
     }
 
+    @Override
+    public boolean hurt(DamageSource pSource, float pAmount) {
+        boolean hurt = super.hurt(pSource, pAmount);
+        if(hurt && !this.getInventory().isEmpty()){
+            this.setThrowingUp();
+            this.throwUpTicks = THROW_UP_DURATION;
+            AccessModUtil.throwItemsTowardRandomPos(this, this.getInventory().removeAllItems());
+        }
+        return hurt;
+    }
+
     /**
      * Methods for {@link IAnimatable}
      */
@@ -363,6 +339,21 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
     @Override
     public void setEatState(EatState eatState) {
         this.entityData.set(DATA_EAT_STATE, eatState);
+    }
+
+    @Override
+    public boolean wantsToEat(ItemEntity item) {
+        return this.getInventory().canAddItem(item.getItem());
+    }
+
+    @Override
+    public void eat(ItemEntity item) {
+        this.onItemPickup(item);
+        ItemStack stack = item.getItem();
+        ItemStack remainder = this.getInventory().addItem(stack);
+        this.take(item, stack.getCount());
+        item.remove();
+        if(!remainder.isEmpty()) AccessModUtil.throwItemsTowardRandomPos(this, Collections.singletonList(remainder));
     }
 
     /**

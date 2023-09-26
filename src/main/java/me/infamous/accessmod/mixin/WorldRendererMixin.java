@@ -6,6 +6,12 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
+/**
+ * Not used in the final project, but kept here for later reference.
+ * This allows a "summoned" mob to have a colored outline.
+ * The first modified variable changes the buffer to an outline layer one that can be colored.
+ * The second modified variable tells Minecraft to use the shader associated with entity outlines.
+ */
 @Mixin(WorldRenderer.class)
 public class WorldRendererMixin {
 
