@@ -11,10 +11,12 @@ import net.minecraft.entity.ai.RandomPositionGenerator;
 import net.minecraft.entity.ai.brain.BrainUtil;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particles.IParticleData;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.tags.ITag;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.*;
@@ -34,6 +36,7 @@ public class AccessModUtil {
     public static final ITag.INamedTag<EntityType<?>> SCYTHE_CAN_HARVEST_SOUL = EntityTypeTags.createOptional(new ResourceLocation(AccessMod.MODID, "scythe_can_harvest_soul"));
     public static final ITag.INamedTag<EntityType<?>> SCYTHE_CAN_HARVEST_SOUL_LIMITED = EntityTypeTags.createOptional(new ResourceLocation(AccessMod.MODID, "scythe_can_harvest_soul_limited"));
     public static final float TO_RADIANS = ((float) Math.PI / 180F);
+    public static final ITag.INamedTag<Item> GOBBLEFIN_FOOD = ItemTags.createOptional(new ResourceLocation(AccessMod.MODID, "gobblefin_food"));
 
     public static void handleDesertWellFillBottle(ItemStack stack, World world, PlayerEntity player) {
         if(world instanceof ServerWorld){

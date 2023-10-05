@@ -2,6 +2,7 @@ package me.infamous.accessmod.common.entity.gobblefin;
 
 import me.infamous.accessmod.common.AccessModUtil;
 import me.infamous.accessmod.common.entity.ai.InventoryHolder;
+import me.infamous.accessmod.common.entity.ai.OwnableMob;
 import me.infamous.accessmod.common.entity.ai.eater.EatItemsGoal;
 import me.infamous.accessmod.common.entity.ai.eater.Eater;
 import me.infamous.accessmod.common.registry.AccessModDataSerializers;
@@ -18,6 +19,7 @@ import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.particles.IParticleData;
 import net.minecraft.particles.ParticleTypes;
@@ -32,6 +34,7 @@ import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.Biomes;
+import net.minecraft.world.server.ServerWorld;
 import net.minecraftforge.event.ForgeEventFactory;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.PlayState;
@@ -43,12 +46,10 @@ import software.bernie.geckolib3.core.manager.AnimationFactory;
 import software.bernie.geckolib3.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
-public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, InventoryHolder {
+public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, InventoryHolder, OwnableMob {
+    public static final int TAME_EVENT_ID = 38;
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
     protected static final AnimationBuilder IDLE_ANIM = new AnimationBuilder().addAnimation("idle", true);
     protected static final AnimationBuilder SWIM_ANIM = new AnimationBuilder().addAnimation("swim", true);
@@ -62,8 +63,17 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
     private static final int THROW_UP_DURATION = AccessModUtil.secondsToTicks(0.75);
 
     private static final DataParameter<EatState> DATA_EAT_STATE = EntityDataManager.defineId(Gobblefin.class, AccessModDataSerializers.getSerializer(AccessModDataSerializers.EAT_STATE));
+
+    private static final DataParameter<Integer> DATA_EAT_TARGET_ID = EntityDataManager.defineId(Gobblefin.class, DataSerializers.INT);
+
+    private static final DataParameter<Optional<UUID>> DATA_ID_OWNER_UUID = EntityDataManager.defineId(Gobblefin.class, DataSerializers.OPTIONAL_UUID);
+
     private final Inventory inventory = new Inventory(8);
     private int throwUpTicks;
+    @Nullable
+    private Entity cachedEatTarget;
+    @Nullable
+    private UUID eatTargetUUID;
 
     public Gobblefin(EntityType<? extends Gobblefin> type, World world) {
         super(type, world);
@@ -93,6 +103,8 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DATA_EAT_STATE, EatState.MOUTH_CLOSED);
+        this.entityData.define(DATA_EAT_TARGET_ID, 0);
+        this.entityData.define(DATA_ID_OWNER_UUID, Optional.empty());
     }
 
     @Override
@@ -167,6 +179,33 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
     }
 
     @Override
+    public ActionResultType mobInteract(PlayerEntity pPlayer, Hand pHand) {
+        ItemStack itemstack = pPlayer.getItemInHand(pHand);
+        if(this.isFood(itemstack) && this.getOwnerUUID() == null){
+            if(!this.level.isClientSide){
+                if(!pPlayer.abilities.instabuild) itemstack.shrink(1);
+                this.setOwnerUUID(pPlayer.getUUID());
+                this.level.broadcastEntityEvent(this, (byte) TAME_EVENT_ID);
+            }
+            return ActionResultType.sidedSuccess(this.level.isClientSide);
+        }
+        return super.mobInteract(pPlayer, pHand);
+    }
+
+    private boolean isFood(ItemStack itemstack) {
+        return itemstack.getItem().is(AccessModUtil.GOBBLEFIN_FOOD);
+    }
+
+    protected void doPlayerRide(PlayerEntity pPlayer) {
+        if (!this.level.isClientSide) {
+            pPlayer.yRot = this.yRot;
+            pPlayer.xRot = this.xRot;
+            pPlayer.startRiding(this);
+        }
+
+    }
+
+    @Override
     public boolean wantsToPickUp(ItemStack stack) {
         return ForgeEventFactory.getMobGriefingEvent(this.level, this) && this.canPickUpLoot();
     }
@@ -213,8 +252,37 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
     }
 
     @Override
+    public void aiStep() {
+        super.aiStep();
+
+        if(this.isSuckingUp()){
+            Entity eatTarget = this.getEatTarget();
+            if(eatTarget != null){
+                // destination is the mob's mouth
+                Vector3d mouthPosition = this.getMouthPosition();
+                if(eatTarget.distanceToSqr(mouthPosition) >= this.getBbWidth() * 0.5F){
+                    double x = mouthPosition.x - eatTarget.getX();
+                    double y = mouthPosition.y - eatTarget.getY();
+                    double z = mouthPosition.z - eatTarget.getZ();
+                    Vector3d moveVec = new Vector3d(x, y, z).normalize().scale(0.025D); // we want to move at a speed of one block per 40 ticks
+                    eatTarget.setDeltaMovement(eatTarget.getDeltaMovement().add(moveVec));
+                }
+            }
+        }
+    }
+
+    public Vector3d getMouthPosition(){
+        Vector3d lookAngle = this.getLookAngle();
+        float width = this.getBbWidth();
+        double mouthX = this.getX() + (lookAngle.x * width * 0.5F);
+        double mouthY = this.getY() + (lookAngle.y * width * 0.5F);
+        double mouthZ = this.getZ() + (lookAngle.z * width * 0.5F);
+        return new Vector3d(mouthX, mouthY, mouthZ);
+    }
+
+    @Override
     public void handleEntityEvent(byte pId) {
-        if (pId == 38) {
+        if (pId == TAME_EVENT_ID) {
             this.addParticlesAroundSelf(ParticleTypes.HAPPY_VILLAGER);
         } else {
             super.handleEntityEvent(pId);
@@ -256,11 +324,6 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
     @Override
     protected SoundEvent getSwimSound() {
         return SoundEvents.DOLPHIN_SWIM;
-    }
-
-    protected boolean closeToNextPos() {
-        BlockPos blockpos = this.getNavigation().getTargetPos();
-        return blockpos != null ? blockpos.closerThan(this.position(), 12.0D) : false;
     }
 
     @Override
@@ -356,6 +419,29 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
         if(!remainder.isEmpty()) AccessModUtil.throwItemsTowardRandomPos(this, Collections.singletonList(remainder));
     }
 
+    @Override
+    public void setEatTarget(@Nullable Entity target) {
+        this.cachedEatTarget = target;
+        this.eatTargetUUID = target == null ? null : target.getUUID();
+        this.entityData.set(DATA_EAT_TARGET_ID, target == null ? 0 : target.getId());
+    }
+
+    @Override
+    @Nullable
+    public Entity getEatTarget() {
+        if(this.cachedEatTarget == null || this.cachedEatTarget.removed){
+            int eatTargetId = this.entityData.get(DATA_EAT_TARGET_ID);
+            if(this.level.isClientSide && eatTargetId != 0){
+                this.cachedEatTarget = this.level.getEntity(eatTargetId);
+            } else if(!this.level.isClientSide && this.eatTargetUUID != null){
+                this.setEatTarget(((ServerWorld)this.level).getEntity(this.eatTargetUUID));
+            } else{
+                this.cachedEatTarget = null;
+            }
+        }
+        return this.cachedEatTarget;
+    }
+
     /**
      * Methods for {@link InventoryHolder}
      */
@@ -363,5 +449,16 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Inv
     @Override
     public Inventory getInventory() {
         return this.inventory;
+    }
+
+    @Override
+    @Nullable
+    public UUID getOwnerUUID() {
+        return this.entityData.get(DATA_ID_OWNER_UUID).orElse(null);
+    }
+
+    @Override
+    public void setOwnerUUID(@Nullable UUID pUniqueId) {
+        this.entityData.set(DATA_ID_OWNER_UUID, Optional.ofNullable(pUniqueId));
     }
 }

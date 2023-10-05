@@ -82,6 +82,7 @@ public class EatItemsGoal<T extends MobEntity & Eater> extends Goal {
                         this.mob.getLookControl().setLookAt(target, this.mob.getMaxHeadYRot(), this.mob.getMaxHeadXRot());
                         this.phase = Phase.SUCK_UP;
                         this.mob.setSuckingUp();
+                        this.mob.setEatTarget(target);
                         this.actionTicks = this.suckUpDuration;
                     } else{
                         this.pursueItem(target);
@@ -108,6 +109,7 @@ public class EatItemsGoal<T extends MobEntity & Eater> extends Goal {
                             this.mob.eat(target);
                             this.phase = Phase.SEARCH;
                             this.mob.setMouthOpen();
+                            this.mob.setEatTarget(null);
                             this.actionTicks = 0;
                         } else{
                             this.pursueItem(target);
@@ -130,6 +132,7 @@ public class EatItemsGoal<T extends MobEntity & Eater> extends Goal {
     private void pursueItem(ItemEntity item) {
         this.phase = Phase.SEARCH;
         this.mob.setMouthOpen();
+        this.mob.setEatTarget(null);
         this.actionTicks = 0;
         this.mob.getNavigation().moveTo(item, this.speedModifier);
     }
