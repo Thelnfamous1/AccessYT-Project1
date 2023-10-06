@@ -10,7 +10,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 
-public class EatItemsGoal<T extends MobEntity & Eater> extends Goal {
+public class EatItemsGoal<T extends MobEntity & Eater & EatTargeting> extends Goal {
     private final T mob;
 
     private final int searchRate;

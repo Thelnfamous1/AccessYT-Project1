@@ -1,11 +1,7 @@
 package me.infamous.accessmod.common.entity.ai.eater;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraftforge.common.util.Constants;
-
-import javax.annotation.Nullable;
 
 public interface Eater {
 
@@ -65,15 +61,6 @@ public interface Eater {
     EatState getEatState();
 
     void setEatState(EatState eatState);
-
-    boolean wantsToEat(ItemEntity item);
-
-    void eat(ItemEntity item);
-
-    void setEatTarget(@Nullable Entity target);
-
-    @Nullable
-    Entity getEatTarget();
 
     enum EatState {
         MOUTH_CLOSED(false),
