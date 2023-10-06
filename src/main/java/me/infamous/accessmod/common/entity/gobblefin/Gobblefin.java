@@ -1,6 +1,7 @@
 package me.infamous.accessmod.common.entity.gobblefin;
 
 import me.infamous.accessmod.common.AccessModUtil;
+import me.infamous.accessmod.common.entity.ai.DynamicSwimmer;
 import me.infamous.accessmod.common.entity.ai.InventoryHolder;
 import me.infamous.accessmod.common.entity.ai.OwnableMob;
 import me.infamous.accessmod.common.entity.ai.eater.EatItemsGoal;
@@ -50,8 +51,9 @@ import software.bernie.geckolib3.util.GeckoLibUtil;
 import javax.annotation.Nullable;
 import java.util.*;
 
-public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, EatTargeting, Feedable, InventoryHolder, OwnableMob {
+public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, EatTargeting, Feedable, InventoryHolder, OwnableMob, DynamicSwimmer {
     public static final int HAPPY_EVENT_ID = 38;
+    public static final double FAST_SWIM_SPEED_MODIFIER = 1.2D;
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
     protected static final AnimationBuilder IDLE_ANIM = new AnimationBuilder().addAnimation("idle", true);
     protected static final AnimationBuilder SWIM_ANIM = new AnimationBuilder().addAnimation("swim", true);
@@ -70,10 +72,12 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
 
     private static final DataParameter<Optional<UUID>> DATA_ID_OWNER_UUID = EntityDataManager.defineId(Gobblefin.class, DataSerializers.OPTIONAL_UUID);
 
-    private static final DataParameter<Boolean> GOT_FOOD = EntityDataManager.defineId(Gobblefin.class, DataSerializers.BOOLEAN);
+    private static final DataParameter<Boolean> DATA_GOT_FOOD = EntityDataManager.defineId(Gobblefin.class, DataSerializers.BOOLEAN);
+    private static final DataParameter<Boolean> DATA_SWIMMING_FAST = EntityDataManager.defineId(Gobblefin.class, DataSerializers.BOOLEAN);
+
 
     private final Inventory inventory = new Inventory(8);
-    private int throwUpTicks;
+    private int eatActionTimer;
     @Nullable
     private Entity cachedEatTarget;
     @Nullable
@@ -109,7 +113,8 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
         this.entityData.define(DATA_EAT_STATE, EatState.MOUTH_CLOSED);
         this.entityData.define(DATA_EAT_TARGET_ID, 0);
         this.entityData.define(DATA_ID_OWNER_UUID, Optional.empty());
-        this.entityData.define(GOT_FOOD, false);
+        this.entityData.define(DATA_GOT_FOOD, false);
+        this.entityData.define(DATA_SWIMMING_FAST, false);
     }
 
     @Override
@@ -138,16 +143,27 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
         this.goalSelector.addGoal(0, new FindWaterGoal(this));
         //this.goalSelector.addGoal(1, new DolphinEntity.SwimToTreasureGoal(this));
         //this.goalSelector.addGoal(2, new DolphinEntity.SwimWithPlayerGoal(this, 4.0D));
-        this.goalSelector.addGoal(1, new PanicGoal(this, 1.2F));
-        this.goalSelector.addGoal(2, new EatItemsGoal<>(this, 20, 8, 100, 1.2F, SUCK_UP_DURATION, SWALLOW_DURATION));
+        this.goalSelector.addGoal(1, new PanicGoal(this, FAST_SWIM_SPEED_MODIFIER));
+        this.goalSelector.addGoal(2, new EatItemsGoal<>(this, 20, 8, 100, FAST_SWIM_SPEED_MODIFIER, SUCK_UP_DURATION, SWALLOW_DURATION));
         this.goalSelector.addGoal(4, new RandomSwimmingGoal(this, 1.0D, 10));
         this.goalSelector.addGoal(4, new LookRandomlyGoal(this));
         this.goalSelector.addGoal(5, new LookAtGoal(this, PlayerEntity.class, 6.0F));
         //this.goalSelector.addGoal(5, new DolphinlikeJumpGoal<>(this, 10, 0.6D, 0.7D));
         //this.goalSelector.addGoal(6, new MeleeAttackGoal(this, 1.2F, true));
         //this.goalSelector.addGoal(8, new FollowBoatGoal(this));
-        this.goalSelector.addGoal(9, new AvoidEntityGoal<>(this, GuardianEntity.class, 8.0F, 1.0D, 1.0D));
+        this.goalSelector.addGoal(9, new AvoidEntityGoal<>(this, GuardianEntity.class, 8.0F, 1.0D, FAST_SWIM_SPEED_MODIFIER));
         //this.targetSelector.addGoal(1, (new HurtByTargetGoal(this, GuardianEntity.class)).setAlertOthers());
+    }
+
+    @Override
+    public void customServerAiStep() {
+        if (this.getMoveControl().hasWanted()) {
+            double speedModifier = this.getMoveControl().getSpeedModifier();
+            this.setSwimmingFast(speedModifier == FAST_SWIM_SPEED_MODIFIER);
+        } else {
+            this.setSwimmingFast(false);
+        }
+
     }
 
     @Override
@@ -185,7 +201,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
         ItemStack itemInHand = pPlayer.getItemInHand(pHand);
         if (!itemInHand.isEmpty() && this.isFood(itemInHand)) {
             if (!this.level.isClientSide) {
-                this.playSound(SoundEvents.DOLPHIN_EAT, 1.0F, 1.0F);
+                this.playSound(getEatSound(), 1.0F, 1.0F);
             }
 
             this.setGotFood(true);
@@ -213,6 +229,11 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
     }
 
     @Override
+    public void stopRiding() {
+        super.stopRiding();
+    }
+
+    @Override
     public boolean wantsToPickUp(ItemStack stack) {
         return ForgeEventFactory.getMobGriefingEvent(this.level, this) && this.canPickUpLoot();
     }
@@ -220,9 +241,9 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
     @Override
     public void baseTick() {
         super.baseTick();
-        if(this.throwUpTicks > 0){
-            this.throwUpTicks--;
-            if(this.throwUpTicks == 0 && !this.level.isClientSide && this.isThrowingUp()){
+        if(this.eatActionTimer > 0){
+            this.eatActionTimer--;
+            if(this.eatActionTimer == 0 && !this.level.isClientSide && this.isThrowingUp()){
                 this.setMouthClosed();
             }
         }
@@ -349,7 +370,6 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
         boolean hurt = super.hurt(pSource, pAmount);
         if(hurt && !this.getInventory().isEmpty()){
             this.setThrowingUp();
-            this.throwUpTicks = THROW_UP_DURATION;
             AccessModUtil.throwItemsTowardRandomPos(this, this.getInventory().removeAllItems());
         }
         return hurt;
@@ -370,6 +390,12 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
     @Nullable
     public Entity getControllingPassenger() {
         return this.getPassengers().isEmpty() ? null : this.getPassengers().get(0);
+    }
+
+    @Override
+    public double getPassengersRidingOffset() {
+        // Gobblefins are 2 blocks tall, player riding offset is -0.35, this puts the rider at the y position of the gobblefin
+        return (double)this.getBbHeight() * 0.175D;
     }
 
     @Override
@@ -395,7 +421,6 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
                 this.yBodyRot = this.yRot;
                 this.yHeadRot = this.yBodyRot;
 
-
                 float left = rider.xxa * 0.5F;
                 float up = -MathHelper.sin(this.xRot * AccessModUtil.TO_RADIANS);
                 float forward = rider.zza;
@@ -407,9 +432,13 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
                 if (this.isControlledByLocalInstance()) {
                     this.setSpeed(this.getMovementSpeed());
                     Vector3d inputVector = new Vector3d(left, up, forward);
+                    // need this to mimic what the move controller does, as it does not tick on the client
+                    if(this.isInWater()){
+                        this.setDeltaMovement(this.getDeltaMovement().add(0.0D, DolphinlikeMoveHelperController.SINK_Y_OFFSET, 0.0D));
+                    }
                     this.swimTravel(inputVector, true);
                 } else if (rider instanceof PlayerEntity) {
-                    this.setDeltaMovement(Vector3d.ZERO);
+                    this.setDeltaMovement(Vector3d.ZERO); // server does not dictate any movement of the gobblefin if mounted by a player
                 }
                 this.calculateEntityAnimation(this, false);
             } else {
@@ -431,7 +460,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
             this.moveRelative(this.getSpeed(), pTravelVector);
             this.move(MoverType.SELF, this.getDeltaMovement());
             this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
-            if (this.getTarget() == null) {
+            if (playerControlled || this.getTarget() == null) {
                 this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -DolphinlikeMoveHelperController.SINK_Y_OFFSET, 0.0D));
             }
         } else {
@@ -471,7 +500,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
 
         // mouth closed, use regular animations
         else if(event.isMoving()){
-            event.getController().setAnimation(SWIM_ANIM);
+            event.getController().setAnimation(this.isSwimmingFast() ? SWIM_ANIM : SWIM_SLOW_ANIM);
         } else{
             event.getController().setAnimation(IDLE_ANIM);
         }
@@ -497,6 +526,17 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
         this.entityData.set(DATA_EAT_STATE, eatState);
     }
 
+    @Override
+    public void setThrowingUp() {
+        Eater.super.setThrowingUp();
+        this.eatActionTimer = THROW_UP_DURATION;
+    }
+
+    @Override
+    public SoundEvent getEatSound() {
+        return SoundEvents.DOLPHIN_EAT;
+    }
+
     /**
      * Methods for {@link EatTargeting}
      */
@@ -511,6 +551,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
 
     @Override
     public void eat(Entity entity) {
+        this.playSound(this.getEatSound(), 1.0F, 1.0F);
         if(entity instanceof ItemEntity){
             ItemEntity item = (ItemEntity) entity;
             this.onItemPickup(item);
@@ -556,12 +597,12 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
 
     @Override
     public boolean gotFood() {
-        return this.entityData.get(GOT_FOOD);
+        return this.entityData.get(DATA_GOT_FOOD);
     }
 
     @Override
     public void setGotFood(boolean gotFood) {
-        this.entityData.set(GOT_FOOD, gotFood);
+        this.entityData.set(DATA_GOT_FOOD, gotFood);
         this.level.broadcastEntityEvent(this, (byte) HAPPY_EVENT_ID);
     }
 
@@ -587,5 +628,19 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
     @Override
     public void setOwnerUUID(@Nullable UUID pUniqueId) {
         this.entityData.set(DATA_ID_OWNER_UUID, Optional.ofNullable(pUniqueId));
+    }
+
+    /**
+     * Methods for {@link DynamicSwimmer}
+     */
+
+    @Override
+    public void setSwimmingFast(boolean swimmingFast) {
+        this.entityData.set(Gobblefin.DATA_SWIMMING_FAST, swimmingFast);
+    }
+
+    @Override
+    public boolean isSwimmingFast() {
+        return this.entityData.get(Gobblefin.DATA_SWIMMING_FAST);
     }
 }

@@ -2,6 +2,7 @@ package me.infamous.accessmod.client.renderer.gobblefin;
 
 import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.common.entity.gobblefin.Gobblefin;
+import net.minecraft.client.Minecraft;
 import net.minecraft.util.ResourceLocation;
 import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
 import software.bernie.geckolib3.core.processor.IBone;
@@ -13,6 +14,7 @@ public class GobblefinModel extends AnimatedGeoModel<Gobblefin> {
     public static final ResourceLocation ANIMATION_LOCATION = new ResourceLocation(AccessMod.MODID, "animations/gobblefin.animation.json");
     public static final ResourceLocation MODEL_LOCATION = new ResourceLocation(AccessMod.MODID, "geo/gobblefin.geo.json");
     public static final ResourceLocation TEXTURE_LOCATION = new ResourceLocation(AccessMod.MODID, "textures/entity/gobblefin/gobblefin.png");
+    public static final ResourceLocation MOUNTED_TEXTURE_LOCATION = new ResourceLocation(AccessMod.MODID, "textures/entity/gobblefin/gobblefin_mounted.png");
 
     @Override
     public ResourceLocation getAnimationFileLocation(Gobblefin animatable) {
@@ -26,6 +28,9 @@ public class GobblefinModel extends AnimatedGeoModel<Gobblefin> {
 
     @Override
     public ResourceLocation getTextureLocation(Gobblefin object) {
+        if(object.getControllingPassenger() == Minecraft.getInstance().player){
+            return MOUNTED_TEXTURE_LOCATION;
+        }
         return TEXTURE_LOCATION;
     }
 

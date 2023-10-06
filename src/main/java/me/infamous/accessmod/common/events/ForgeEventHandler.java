@@ -7,6 +7,7 @@ import me.infamous.accessmod.common.capability.SoulsCapabilityProvider;
 import me.infamous.accessmod.common.entity.ai.summonable.FollowSummonerGoal;
 import me.infamous.accessmod.common.entity.ai.summonable.SummonerHurtByTargetGoal;
 import me.infamous.accessmod.common.entity.ai.summonable.SummonerHurtTargetGoal;
+import me.infamous.accessmod.common.entity.gobblefin.Gobblefin;
 import me.infamous.accessmod.common.item.SoulScytheItem;
 import me.infamous.accessmod.common.network.AccessModNetwork;
 import me.infamous.accessmod.common.network.ServerboundDuneJumpPacket;
@@ -31,6 +32,7 @@ import net.minecraft.world.spawner.ISpecialSpawner;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.event.entity.EntityMountEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
@@ -164,6 +166,15 @@ public class ForgeEventHandler {
     static void onStartTracking(PlayerEvent.StartTracking event){
         if(event.getTarget() instanceof MobEntity && Summonable.cast((MobEntity) event.getTarget()).isSummoned()){
             Summonable.syncSummonerUUID((MobEntity) event.getTarget());
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    static void onDismount(EntityMountEvent event){
+        if(!event.isCanceled() && !event.getWorldObj().isClientSide && event.getEntityBeingMounted() instanceof Gobblefin){
+            if(event.isDismounting()){
+                ((Gobblefin)event.getEntityBeingMounted()).setThrowingUp();
+            }
         }
     }
 

@@ -18,14 +18,14 @@ public class EatItemsGoal<T extends MobEntity & Eater & EatTargeting> extends Go
     private final int searchDistance;
     private final int eatRate;
     private int nextEatTime;
-    private final float speedModifier;
+    private final double speedModifier;
     private final int suckUpDuration;
     private final int swallowDuration;
     private int actionTicks;
     private List<ItemEntity> nearbyItems = Collections.emptyList();
     private Phase phase;
 
-    public EatItemsGoal(T mob, int searchRate, int searchDistance, int eatRate, float speedModifier, int suckUpDuration, int swallowDuration) {
+    public EatItemsGoal(T mob, int searchRate, int searchDistance, int eatRate, double speedModifier, int suckUpDuration, int swallowDuration) {
         this.mob = mob;
         this.searchRate = searchRate;
         this.searchCooldown = mob.getRandom().nextInt(searchRate);

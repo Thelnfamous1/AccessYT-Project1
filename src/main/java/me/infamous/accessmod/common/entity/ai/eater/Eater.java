@@ -1,6 +1,7 @@
 package me.infamous.accessmod.common.entity.ai.eater;
 
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.util.SoundEvent;
 import net.minecraftforge.common.util.Constants;
 
 public interface Eater {
@@ -57,6 +58,8 @@ public interface Eater {
     default void setThrowingUp(){
         this.setEatState(EatState.THROWING_UP);
     }
+
+    SoundEvent getEatSound();
 
     EatState getEatState();
 
