@@ -214,10 +214,12 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
 
         if(this.isVehicle()){
             return super.mobInteract(pPlayer, pHand);
-        } else{
+        } else if(this.gotFood()){
             this.doPlayerRide(pPlayer);
             return ActionResultType.sidedSuccess(this.level.isClientSide);
         }
+
+        return ActionResultType.PASS;
     }
 
     protected void doPlayerRide(PlayerEntity pPlayer) {
@@ -241,12 +243,24 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
     @Override
     public void baseTick() {
         super.baseTick();
+
+        this.getPassengers().forEach(passenger -> {
+            if (passenger.getAirSupply() < passenger.getMaxAirSupply()) {
+                this.replenishAirSupplyForPassenger(passenger);
+            }
+        });
+
         if(this.eatActionTimer > 0){
             this.eatActionTimer--;
             if(this.eatActionTimer == 0 && !this.level.isClientSide && this.isThrowingUp()){
                 this.setMouthClosed();
             }
         }
+    }
+
+    protected void replenishAirSupplyForPassenger(Entity entity){
+        // min call recreates logic in LivingEntity#increaseAirSupply
+        entity.setAirSupply(Math.min(entity.getAirSupply() + 4, entity.getMaxAirSupply()));
     }
 
     @Override
@@ -282,12 +296,6 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
     @Override
     public void aiStep() {
         super.aiStep();
-
-        if(!this.level.isClientSide && this.gotFood()){
-            if (this.level.random.nextInt(80) == 0) {
-                this.level.broadcastEntityEvent(this, (byte)HAPPY_EVENT_ID);
-            }
-        }
 
         if(this.isSuckingUp()){
             Entity eatTarget = this.getEatTarget();
@@ -394,8 +402,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
 
     @Override
     public double getPassengersRidingOffset() {
-        // Gobblefins are 2 blocks tall, player riding offset is -0.35, this puts the rider at the y position of the gobblefin
-        return (double)this.getBbHeight() * 0.175D;
+        return 0.0D;
     }
 
     @Override

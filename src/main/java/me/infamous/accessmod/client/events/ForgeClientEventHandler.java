@@ -2,7 +2,9 @@ package me.infamous.accessmod.client.events;
 
 import me.infamous.accessmod.AccessMod;
 import me.infamous.accessmod.client.overlay.SoulsOverlay;
+import me.infamous.accessmod.common.entity.gobblefin.Gobblefin;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.FOVUpdateEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -14,6 +16,13 @@ public class ForgeClientEventHandler {
     static void renderOverlayPost(RenderGameOverlayEvent.Post event){
         if(event.getType() == RenderGameOverlayEvent.ElementType.HOTBAR){
             SoulsOverlay.renderSouls(event.getWindow().getGuiScaledWidth(), event.getWindow().getGuiScaledHeight(), event.getMatrixStack());
+        }
+    }
+
+    @SubscribeEvent
+    static void onFOVModifier(FOVUpdateEvent event){
+        if(event.getEntity().getVehicle() instanceof Gobblefin){
+            event.setNewfov(event.getNewfov() * 8.0F);
         }
     }
 }
