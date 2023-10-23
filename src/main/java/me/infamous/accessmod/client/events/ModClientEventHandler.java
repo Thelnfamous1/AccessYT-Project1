@@ -1,18 +1,20 @@
 package me.infamous.accessmod.client.events;
 
 import me.infamous.accessmod.AccessMod;
+import me.infamous.accessmod.client.keybinding.AccessModKeybindings;
 import me.infamous.accessmod.client.renderer.dune.DuneRenderer;
 import me.infamous.accessmod.client.renderer.gobblefin.GobblefinRenderer;
 import me.infamous.accessmod.client.renderer.lurker.LurkerRenderer;
-import ovh.corail.flyingthings.render.RenderMagicCarpet;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.SpriteRenderer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import ovh.corail.flyingthings.render.RenderMagicCarpet;
 
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD, modid = AccessMod.MODID, value = Dist.CLIENT)
 public class ModClientEventHandler {
@@ -28,5 +30,8 @@ public class ModClientEventHandler {
         RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.LURKER.get(), LurkerRenderer::new);
 
         RenderingRegistry.registerEntityRenderingHandler(AccessModEntityTypes.GOBBLEFIN.get(), GobblefinRenderer::new);
+
+        ClientRegistry.registerKeyBinding(AccessModKeybindings.GOBBLEFIN_VORTEX);
+        ClientRegistry.registerKeyBinding(AccessModKeybindings.GOBBLEFIN_BOOST);
     }
 }

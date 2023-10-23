@@ -9,6 +9,7 @@
     "DesertWellsFeatureMixin",
     "EntityAccessor",
     "EntityMixin",
+    "EntityPosWrapperAccessor",
     "EntityPredicateMixin",
     "GlassBottleItemMixin",
     "GoalSelectorAccesor",

@@ -12,6 +12,13 @@
   "entity.accessmod.gobblefin": "Gobblefin",
   "item.accessmod.gobblefin_spawn_egg": "Gobblefin Spawn Egg",
 
+  "key.accessmod.gobblefin_boost": "Gobblefin Boost",
+  "key.accessmod.gobblefin_vortex": "Gobblefin Vortex",
+
+  "death.attack.accessmod.vortex": "%1$s blew up",
+  "death.attack.accessmod.vortex.player": "%1$s was blown up by %2$s",
+  "death.attack.accessmod.vortex.player.item": "%1$s was blown up by %2$s using %3$s",
+
   "accessmod.item.magic_carpet": "§6Magic Carpet",
   "accessmod.item.magic_carpet.halloween": "§6Halloween Carpet",
   "accessmod.item.magic_carpet.pillage": "§6Carpet of the Hero",

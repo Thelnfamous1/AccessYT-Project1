@@ -19,27 +19,22 @@ public class EatItemsGoal<T extends MobEntity & Eater & EatTargeting> extends Go
     private final int eatRate;
     private int nextEatTime;
     private final double speedModifier;
-    private final int suckUpDuration;
-    private final int swallowDuration;
-    private int actionTicks;
     private List<ItemEntity> nearbyItems = Collections.emptyList();
     private Phase phase;
 
-    public EatItemsGoal(T mob, int searchRate, int searchDistance, int eatRate, double speedModifier, int suckUpDuration, int swallowDuration) {
+    public EatItemsGoal(T mob, int searchRate, int searchDistance, int eatRate, double speedModifier) {
         this.mob = mob;
         this.searchRate = searchRate;
         this.searchCooldown = mob.getRandom().nextInt(searchRate);
         this.searchDistance = searchDistance;
         this.eatRate = eatRate;
         this.speedModifier = speedModifier;
-        this.suckUpDuration = suckUpDuration;
-        this.swallowDuration = swallowDuration;
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
     @Override
     public boolean canUse() {
-        if(this.mob.isThrowingUp()){
+        if(this.mob.isThrowingUp() || this.riderControlsEating()){
             return false;
         } else if (this.nextEatTime > this.mob.tickCount) {
             return false;
@@ -47,6 +42,10 @@ public class EatItemsGoal<T extends MobEntity & Eater & EatTargeting> extends Go
             this.nearbyItems = this.findAndCacheNearbyItems(false);
             return !this.nearbyItems.isEmpty() && this.mob.getLastHurtByMob() == null;
         }
+    }
+
+    private boolean riderControlsEating() {
+        return this.mob.isVehicle() && this.mob.canBeControlledByRider();
     }
 
     private List<ItemEntity> findAndCacheNearbyItems(boolean ignoreCooldown) {
@@ -83,34 +82,29 @@ public class EatItemsGoal<T extends MobEntity & Eater & EatTargeting> extends Go
                         this.phase = Phase.SUCK_UP;
                         this.mob.setSuckingUp();
                         this.mob.setEatTarget(target);
-                        this.actionTicks = this.suckUpDuration;
                     } else{
                         this.pursueItem(target);
                     }
                     break;
                 case SUCK_UP:
-                    this.actionTicks--;
-                    if(this.actionTicks == 0){
+                    if(this.mob.getEatActionTimer() == this.mob.getEatActionPoint()){
                         if(this.canPickUpItem(target)){
                             this.mob.getNavigation().stop();
                             this.mob.getLookControl().setLookAt(target, this.mob.getMaxHeadYRot(), this.mob.getMaxHeadXRot());
                             this.phase = Phase.SWALLOW;
                             this.mob.setSwallowing();
-                            this.actionTicks = this.swallowDuration;
                         } else{
                             this.pursueItem(target);
                         }
                     }
                     break;
                 case SWALLOW:
-                    this.actionTicks--;
-                    if(this.actionTicks == 0){
+                    if(this.mob.getEatActionTimer() == this.mob.getEatActionPoint()){
                         if(this.canPickUpItem(target)){
                             this.mob.eat(target);
                             this.phase = Phase.SEARCH;
                             this.mob.setMouthOpen();
                             this.mob.setEatTarget(null);
-                            this.actionTicks = 0;
                         } else{
                             this.pursueItem(target);
                         }
@@ -133,7 +127,6 @@ public class EatItemsGoal<T extends MobEntity & Eater & EatTargeting> extends Go
         this.phase = Phase.SEARCH;
         this.mob.setMouthOpen();
         this.mob.setEatTarget(null);
-        this.actionTicks = 0;
         this.mob.getNavigation().moveTo(item, this.speedModifier);
     }
 
@@ -144,7 +137,7 @@ public class EatItemsGoal<T extends MobEntity & Eater & EatTargeting> extends Go
 
     @Override
     public void stop() {
-        if(!this.mob.isThrowingUp()){
+        if(!this.mob.isThrowingUp() && !this.riderControlsEating()){
             this.mob.setMouthClosed();
         }
         this.nextEatTime = this.mob.tickCount + this.mob.getRandom().nextInt(this.eatRate);

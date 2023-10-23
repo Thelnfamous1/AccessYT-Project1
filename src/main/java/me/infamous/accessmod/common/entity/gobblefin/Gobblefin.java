@@ -82,6 +82,9 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
     private Entity cachedEatTarget;
     @Nullable
     private UUID eatTargetUUID;
+    private boolean manualBoosting;
+    private boolean manualVortex;
+    private Vortex vortex;
 
     public Gobblefin(EntityType<? extends Gobblefin> type, World world) {
         super(type, world);
@@ -144,7 +147,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
         //this.goalSelector.addGoal(1, new DolphinEntity.SwimToTreasureGoal(this));
         //this.goalSelector.addGoal(2, new DolphinEntity.SwimWithPlayerGoal(this, 4.0D));
         this.goalSelector.addGoal(1, new PanicGoal(this, FAST_SWIM_SPEED_MODIFIER));
-        this.goalSelector.addGoal(2, new EatItemsGoal<>(this, 20, 8, 100, FAST_SWIM_SPEED_MODIFIER, SUCK_UP_DURATION, SWALLOW_DURATION));
+        this.goalSelector.addGoal(2, new EatItemsGoal<>(this, 20, 8, 100, FAST_SWIM_SPEED_MODIFIER));
         this.goalSelector.addGoal(4, new RandomSwimmingGoal(this, 1.0D, 10));
         this.goalSelector.addGoal(4, new LookRandomlyGoal(this));
         this.goalSelector.addGoal(5, new LookAtGoal(this, PlayerEntity.class, 6.0F));
@@ -157,13 +160,14 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
 
     @Override
     public void customServerAiStep() {
-        if (this.getMoveControl().hasWanted()) {
-            double speedModifier = this.getMoveControl().getSpeedModifier();
-            this.setSwimmingFast(speedModifier == FAST_SWIM_SPEED_MODIFIER);
-        } else {
-            this.setSwimmingFast(false);
+        if (!this.manualBoosting){
+            if(this.getMoveControl().hasWanted()) {
+                double speedModifier = this.getMoveControl().getSpeedModifier();
+                this.setSwimmingFast(speedModifier >= FAST_SWIM_SPEED_MODIFIER);
+            } else{
+                this.setSwimmingFast(false);
+            }
         }
-
     }
 
     @Override
@@ -227,6 +231,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
             pPlayer.yRot = this.yRot;
             pPlayer.xRot = this.xRot;
             pPlayer.startRiding(this);
+            this.setSwallowing();
         }
     }
 
@@ -249,13 +254,6 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
                 this.replenishAirSupplyForPassenger(passenger);
             }
         });
-
-        if(this.eatActionTimer > 0){
-            this.eatActionTimer--;
-            if(this.eatActionTimer == 0 && !this.level.isClientSide && this.isThrowingUp()){
-                this.setMouthClosed();
-            }
-        }
     }
 
     protected void replenishAirSupplyForPassenger(Entity entity){
@@ -297,7 +295,31 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
     public void aiStep() {
         super.aiStep();
 
-        if(this.isSuckingUp()){
+        if(this.eatActionTimer > 0){
+            this.eatActionTimer--;
+            if(this.eatActionTimer == 0 && !this.level.isClientSide){
+                if(this.isSuckingUp() && this.manualVortex) this.setSwallowing();
+                else if(this.isSwallowing() && this.manualVortex) this.setMouthOpen();
+                else if(this.isThrowingUp()){
+                    if(this.manualVortex) {
+                        this.setMouthOpen();
+                    } else{
+                        this.setMouthClosed();
+                    }
+                }
+            }
+        }
+
+        if(this.manualBoosting && !this.level.isClientSide){
+            this.setSwimmingFast(true);
+        }
+
+        if(this.vortex != null){
+            this.vortex.setPosition(this.getMouthPosition());
+            this.vortex.tick();
+        }
+
+        if(this.isSuckingUp() && !this.level.isClientSide){
             Entity eatTarget = this.getEatTarget();
             if(eatTarget != null){
                 // destination is the mob's mouth
@@ -308,9 +330,14 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
                     double z = mouthPosition.z - eatTarget.getZ();
                     Vector3d moveVec = new Vector3d(x, y, z).normalize().scale(0.025D); // we want to move at a speed of one block per 40 ticks
                     eatTarget.setDeltaMovement(eatTarget.getDeltaMovement().add(moveVec));
+                    eatTarget.hasImpulse = true;
                 }
             }
         }
+    }
+
+    private boolean isRiddenByPlayer() {
+        return this.getControllingPassenger() instanceof PlayerEntity;
     }
 
     public Vector3d getMouthPosition(){
@@ -437,7 +464,11 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
 
                 this.flyingSpeed = this.getSpeed() * 0.1F;
                 if (this.isControlledByLocalInstance()) {
-                    this.setSpeed(this.getMovementSpeed());
+                    float movementSpeed = this.getMovementSpeed();
+                    if(this.isSwimmingFast()){
+                        movementSpeed *= FAST_SWIM_SPEED_MODIFIER;
+                    }
+                    this.setSpeed(movementSpeed);
                     Vector3d inputVector = new Vector3d(left, up, forward);
                     // need this to mimic what the move controller does, as it does not tick on the client
                     if(this.isInWater()){
@@ -531,6 +562,29 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
     @Override
     public void setEatState(EatState eatState) {
         this.entityData.set(DATA_EAT_STATE, eatState);
+    }
+
+    @Override
+    public int getEatActionTimer() {
+        return this.eatActionTimer;
+    }
+
+    @Override
+    public int getEatActionPoint() {
+        if(this.isSwallowing()) return SWALLOW_DURATION / 2;
+        return 0;
+    }
+
+    @Override
+    public void setSuckingUp() {
+        Eater.super.setSuckingUp();
+        this.eatActionTimer = SUCK_UP_DURATION;
+    }
+
+    @Override
+    public void setSwallowing() {
+        Eater.super.setSwallowing();
+        this.eatActionTimer = SWALLOW_DURATION;
     }
 
     @Override
@@ -649,5 +703,25 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, Eater, Eat
     @Override
     public boolean isSwimmingFast() {
         return this.entityData.get(Gobblefin.DATA_SWIMMING_FAST);
+    }
+
+    public void startPlayerVortex() {
+        this.setMouthOpen();
+        this.manualVortex = true;
+        this.vortex = VortexHelper.vortex(this.level, this, this.getMouthPosition(), 3.0F, Vortex.Mode.BREAK);
+    }
+
+    public void stopPlayerVortex() {
+        this.setMouthClosed();
+        this.manualVortex = false;
+        this.vortex = null;
+    }
+
+    public void startPlayerBoosting() {
+        this.manualBoosting = true;
+    }
+
+    public void stopPlayerBoosting() {
+        this.manualBoosting = false;
     }
 }

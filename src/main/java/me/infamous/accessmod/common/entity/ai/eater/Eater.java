@@ -65,6 +65,10 @@ public interface Eater {
 
     void setEatState(EatState eatState);
 
+    int getEatActionTimer();
+
+    int getEatActionPoint();
+
     enum EatState {
         MOUTH_CLOSED(false),
         MOUTH_OPEN(false),

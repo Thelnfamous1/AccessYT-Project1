@@ -6,6 +6,8 @@ import me.infamous.accessmod.common.entity.dune.Dune;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import me.infamous.accessmod.common.registry.AccessModPOITypes;
 import me.infamous.accessmod.mixin.EntityAccessor;
+import me.infamous.accessmod.mixin.EntityPosWrapperAccessor;
+import net.minecraft.client.Minecraft;
 import net.minecraft.entity.*;
 import net.minecraft.entity.ai.RandomPositionGenerator;
 import net.minecraft.entity.ai.brain.BrainUtil;
@@ -13,6 +15,7 @@ import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.PacketBuffer;
 import net.minecraft.particles.IParticleData;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.tags.ITag;
@@ -24,6 +27,7 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -158,5 +162,35 @@ public class AccessModUtil {
                 mob.level.addFreshEntity(drop);
             }
         }
+    }
+
+    @Nullable
+    public static IPosWrapper readPositionTracker(PacketBuffer buffer) {
+       boolean isEntity = buffer.readBoolean();
+       if(isEntity) {
+          int id = buffer.readInt();
+          Entity entity = Minecraft.getInstance().level.getEntity(id);
+          boolean trackEyeHeight = buffer.readBoolean();
+          if(entity != null){
+              return new EntityPosWrapper(entity, trackEyeHeight);
+          } else{
+              return null;
+          }
+       }
+        else{
+          BlockPos blockPos = buffer.readBlockPos();
+          return new BlockPosWrapper(new BlockPos(blockPos));
+       }
+    }
+
+    public static void writePositionTracker(IPosWrapper position, PacketBuffer pBuffer) {
+       if(position instanceof EntityPosWrapper){
+          pBuffer.writeBoolean(true);
+          pBuffer.writeInt(((EntityPosWrapperAccessor) position).accessmod_getEntity().getId());
+          pBuffer.writeBoolean(((EntityPosWrapperAccessor) position).accessmod_getTrackEyeHeight());
+       } else{
+          pBuffer.writeBoolean(false);
+          pBuffer.writeBlockPos(position.currentBlockPosition());
+       }
     }
 }

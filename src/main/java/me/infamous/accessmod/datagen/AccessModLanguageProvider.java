@@ -1,6 +1,7 @@
 package me.infamous.accessmod.datagen;
 
 import me.infamous.accessmod.AccessMod;
+import me.infamous.accessmod.client.keybinding.AccessModKeybindings;
 import me.infamous.accessmod.common.registry.AccessModEffects;
 import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import me.infamous.accessmod.common.registry.AccessModItems;
@@ -29,5 +30,11 @@ public class AccessModLanguageProvider extends LanguageProvider {
 
         this.addEntityType(AccessModEntityTypes.GOBBLEFIN, "Gobblefin");
         this.add(AccessModItems.GOBBLEFIN_SPAWN_EGG.get(), "Gobblefin Spawn Egg");
+        this.add(AccessModKeybindings.GOBBLEFIN_VORTEX_KEY, "Gobblefin Vortex");
+        this.add(AccessModKeybindings.GOBBLEFIN_VORTEX_KEY, "Gobblefin Vortex");
+
+        this.add("death.attack.accessmod.vortex", "%1$s was sucked up");
+        this.add("death.attack.accessmod.vortex.player", "%1$s was sucked up by %2$s");
+        this.add("death.attack.accessmod.vortex.player.item", "%1$s was sucked up by %2$s using %3$s");
     }
 }
