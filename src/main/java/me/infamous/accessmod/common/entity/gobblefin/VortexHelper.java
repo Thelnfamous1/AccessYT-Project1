@@ -16,14 +16,14 @@ import javax.annotation.Nullable;
 
 public class VortexHelper {
 
-    public static Vortex vortex(World level, @Nullable Entity pEntity, Vector3d position, float pExplosionRadius, Vortex.Mode pMode) {
-        return vortex(level, pEntity, null, null, position, pExplosionRadius, pMode);
+    public static Vortex vortex(World level, @Nullable Entity source, Vector3d position, float vortexRadius, Vortex.Mode pMode) {
+        return vortex(level, source, null, null, position, vortexRadius, pMode);
     }
 
-    public static Vortex vortex(World level, @Nullable Entity pExploder, @Nullable DamageSource pDamageSource, @Nullable ExplosionContext pContext, Vector3d position, float pSize, Vortex.Mode pMode) {
-        Vortex vortex = new Vortex(level, pExploder, pDamageSource, pContext, position, pSize, pMode);
+    public static Vortex vortex(World level, @Nullable Entity source, @Nullable DamageSource pDamageSource, @Nullable ExplosionContext pContext, Vector3d position, float vortexRadius, Vortex.Mode pMode) {
+        Vortex vortex = new Vortex(level, source, pDamageSource, pContext, position, vortexRadius, pMode);
         //if (net.minecraftforge.event.ForgeEventFactory.onExplosionStart(this, vortex)) return vortex;
-        vortex.explode();
+        vortex.initVortex();
         vortex.finalizeVortex(level.isClientSide);
 
         if(!level.isClientSide){
@@ -34,7 +34,7 @@ public class VortexHelper {
             for(ServerPlayerEntity player : ((ServerWorld)level).players()) {
                 if (player.distanceToSqr(position) < 4096.0D) {
                     AccessModNetwork.SYNC_CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                            new ClientboundVortexPacket(position, pSize, vortex.getBlocksToBlow(), vortex.getPlayerHitVec(player).orElse(null)));
+                            new ClientboundVortexPacket(position, vortexRadius, vortex.getBlocksToBlow(), vortex.getPlayerHitVec(player).orElse(null)));
                 }
             }
         }

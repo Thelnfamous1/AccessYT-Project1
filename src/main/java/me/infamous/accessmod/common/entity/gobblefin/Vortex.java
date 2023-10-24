@@ -9,7 +9,7 @@ import me.infamous.accessmod.AccessMod;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.enchantment.ProtectionEnchantment;
+import net.minecraft.block.FlowingFluidBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.item.ItemEntity;
@@ -19,9 +19,10 @@ import net.minecraft.fluid.FluidState;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootContext;
 import net.minecraft.loot.LootParameters;
-import net.minecraft.particles.ParticleTypes;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.*;
+import net.minecraft.util.DamageSource;
+import net.minecraft.util.EntityDamageSource;
+import net.minecraft.util.EntityPredicates;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -48,6 +49,7 @@ public class Vortex {
    private final List<BlockPos> blocksToBlow = Lists.newArrayList();
    private final Map<PlayerEntity, Vector3d> hitPlayers = Maps.newHashMap();
    private Vector3d position;
+   private List<Entity> hitEntities = Lists.newArrayList();
 
    public Vortex(World pLevel, @Nullable Entity pSource, Vector3d position, float pRadius, List<BlockPos> pPositions) {
       this(pLevel, pSource, position, pRadius, Vortex.Mode.DESTROY, pPositions);
@@ -84,9 +86,60 @@ public class Vortex {
       return pEntity == null ? EXPLOSION_DAMAGE_CALCULATOR : new EntityExplosionContext(pEntity);
    }
 
-   public void explode() {
+   public void tick() {
+      Vector3d origin = this.getPosition();
+      float diameter = this.radius * 2.0F;
+      int xMin = MathHelper.floor(origin.x - (double)diameter - 1.0D);
+      int xMax = MathHelper.floor(origin.x + (double)diameter + 1.0D);
+      int yMin = MathHelper.floor(origin.y - (double)diameter - 1.0D);
+      int yMax = MathHelper.floor(origin.y + (double)diameter + 1.0D);
+      int zMin = MathHelper.floor(origin.z - (double)diameter - 1.0D);
+      int zMax = MathHelper.floor(origin.z + (double)diameter + 1.0D);
+      this.hitEntities = this.level.getEntities(this.source, new AxisAlignedBB(xMin, yMin, zMin, xMax, yMax, zMax), hitEntity -> {
+         Entity vortexOwner = this.getVortexOwner();
+         return EntityPredicates.NO_SPECTATORS.test(hitEntity)
+                 && (vortexOwner == null || !vortexOwner.getPassengers().contains(hitEntity ) && vortexOwner.getVehicle() != hitEntity);
+      });
+      //net.minecraftforge.event.ForgeEventFactory.onExplosionDetonate(this.level, this, hitEntities, diameter);
+
+      for(int entIdx = 0; entIdx < hitEntities.size(); ++entIdx) {
+         Entity hitEntity = hitEntities.get(entIdx);
+         if (!hitEntity.ignoreExplosion()) {
+            double distFactor = MathHelper.sqrt(hitEntity.distanceToSqr(origin)) / diameter;
+            if (distFactor <= 1.0D) {
+               double xDist = origin.x - hitEntity.getX();
+               double yDist = origin.y - hitEntity.getEyeY();
+               double zDist = origin.z - hitEntity.getZ();
+               double dist = MathHelper.sqrt(xDist * xDist + yDist * yDist + zDist * zDist);
+               if (dist != 0.0D) {
+                  xDist = xDist / dist;
+                  yDist = yDist / dist;
+                  zDist = zDist / dist;
+                  double seenPercent = Explosion.getSeenPercent(origin, hitEntity);
+                  double damageFactor = (1.0D - distFactor) * seenPercent;
+                  //hitEntity.hurt(this.getDamageSource(), (float)((int)((damageFactor * damageFactor + damageFactor) / 2.0D * 7.0D * (double)diameter + 1.0D)));
+                  double knockbackFactor = damageFactor;
+                  if (hitEntity instanceof LivingEntity) {
+                     //knockbackFactor = ProtectionEnchantment.getExplosionKnockbackAfterDampener((LivingEntity)hitEntity, damageFactor);
+                  }
+
+                  //hitEntity.setDeltaMovement(hitEntity.getDeltaMovement().add(xDist * knockbackFactor, yDist * knockbackFactor, zDist * knockbackFactor));
+                  hitEntity.push(xDist * 0.025D, yDist * 0.025D, zDist * 0.025D); // we want to move at a speed of one block per 40 ticks
+                  if (hitEntity instanceof PlayerEntity) {
+                     PlayerEntity hitPlayer = (PlayerEntity)hitEntity;
+                     if (!hitPlayer.isSpectator() && (!hitPlayer.isCreative() || !hitPlayer.abilities.flying)) {
+                        this.hitPlayers.put(hitPlayer, new Vector3d(xDist * damageFactor, yDist * damageFactor, zDist * damageFactor));
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   public void initVortex() {
       this.blowUpBlocks();
-      this.blowUpEntities();
+      //this.blowUpEntities();
    }
 
    private void blowUpBlocks() {
@@ -135,71 +188,18 @@ public class Vortex {
       this.blocksToBlow.addAll(blocksToBlow);
    }
 
-   private void blowUpEntities() {
-      Vector3d origin = this.getPosition();
-      float diameter = this.radius * 2.0F;
-      int xMin = MathHelper.floor(origin.x - (double)diameter - 1.0D);
-      int xMax = MathHelper.floor(origin.x + (double)diameter + 1.0D);
-      int yMin = MathHelper.floor(origin.y - (double)diameter - 1.0D);
-      int yMax = MathHelper.floor(origin.y + (double)diameter + 1.0D);
-      int zMin = MathHelper.floor(origin.z - (double)diameter - 1.0D);
-      int zMax = MathHelper.floor(origin.z + (double)diameter + 1.0D);
-      List<Entity> hitEntities = this.level.getEntities(this.source, new AxisAlignedBB(xMin, yMin, zMin, xMax, yMax, zMax), hitEntity -> {
-         Entity vortexOwner = this.getVortexOwner();
-         return EntityPredicates.NO_SPECTATORS.test(hitEntity)
-                 && (vortexOwner == null || !vortexOwner.getPassengers().contains(hitEntity ) && vortexOwner.getVehicle() != hitEntity);
-      });
-      //net.minecraftforge.event.ForgeEventFactory.onExplosionDetonate(this.level, this, hitEntities, diameter);
-
-      for(int entIdx = 0; entIdx < hitEntities.size(); ++entIdx) {
-         Entity hitEntity = hitEntities.get(entIdx);
-         if (!hitEntity.ignoreExplosion()) {
-            double d12 = MathHelper.sqrt(hitEntity.distanceToSqr(origin)) / diameter;
-            if (d12 <= 1.0D) {
-               double xDist = hitEntity.getX() - origin.x;
-               double yDist = hitEntity.getEyeY() - origin.y;
-               double zDist = hitEntity.getZ() - origin.z;
-               double dist = MathHelper.sqrt(xDist * xDist + yDist * yDist + zDist * zDist);
-               if (dist != 0.0D) {
-                  xDist = xDist / dist;
-                  yDist = yDist / dist;
-                  zDist = zDist / dist;
-                  double seenPercent = Explosion.getSeenPercent(origin, hitEntity);
-                  double damageFactor = (1.0D - d12) * seenPercent;
-                  hitEntity.hurt(this.getDamageSource(), (float)((int)((damageFactor * damageFactor + damageFactor) / 2.0D * 7.0D * (double)diameter + 1.0D)));
-                  double knockbackFactor = damageFactor;
-                  if (hitEntity instanceof LivingEntity) {
-                     knockbackFactor = ProtectionEnchantment.getExplosionKnockbackAfterDampener((LivingEntity)hitEntity, damageFactor);
-                  }
-
-                  hitEntity.setDeltaMovement(hitEntity.getDeltaMovement().add(xDist * knockbackFactor, yDist * knockbackFactor, zDist * knockbackFactor));
-                  if (hitEntity instanceof PlayerEntity) {
-                     PlayerEntity hitPlayer = (PlayerEntity)hitEntity;
-                     if (!hitPlayer.isSpectator() && (!hitPlayer.isCreative() || !hitPlayer.abilities.flying)) {
-                        this.hitPlayers.put(hitPlayer, new Vector3d(xDist * damageFactor, yDist * damageFactor, zDist * damageFactor));
-                     }
-                  }
-               }
-            }
-         }
-      }
-   }
-
-   public void tick() {
-   }
-
    public void finalizeVortex(boolean pSpawnParticles) {
       Vector3d currentPosition = this.getPosition();
       if (this.level.isClientSide) {
-         this.level.playLocalSound(currentPosition.x, currentPosition.y, currentPosition.z, SoundEvents.GENERIC_EXPLODE, SoundCategory.BLOCKS, 4.0F, (1.0F + (this.level.random.nextFloat() - this.level.random.nextFloat()) * 0.2F) * 0.7F, false);
+         //this.level.playLocalSound(currentPosition.x, currentPosition.y, currentPosition.z, SoundEvents.GENERIC_EXPLODE, SoundCategory.BLOCKS, 4.0F, (1.0F + (this.level.random.nextFloat() - this.level.random.nextFloat()) * 0.2F) * 0.7F, false);
       }
 
       boolean destroyBlocks = this.blockInteraction != Vortex.Mode.NONE;
       if (pSpawnParticles) {
          if (!(this.radius < 2.0F) && destroyBlocks) {
-            this.level.addParticle(ParticleTypes.EXPLOSION_EMITTER, currentPosition.x, currentPosition.y, currentPosition.z, 1.0D, 0.0D, 0.0D);
+            //this.level.addParticle(ParticleTypes.EXPLOSION_EMITTER, currentPosition.x, currentPosition.y, currentPosition.z, 1.0D, 0.0D, 0.0D);
          } else {
-            this.level.addParticle(ParticleTypes.EXPLOSION, currentPosition.x, currentPosition.y, currentPosition.z, 1.0D, 0.0D, 0.0D);
+            //this.level.addParticle(ParticleTypes.EXPLOSION, currentPosition.x, currentPosition.y, currentPosition.z, 1.0D, 0.0D, 0.0D);
          }
       }
 
@@ -210,7 +210,8 @@ public class Vortex {
          for(BlockPos blockToBlow : this.blocksToBlow) {
             BlockState stateToBlow = this.level.getBlockState(blockToBlow);
             Block block = stateToBlow.getBlock();
-            if (!stateToBlow.isAir(this.level, blockToBlow)) {
+            boolean isFluidBlock = block instanceof FlowingFluidBlock;
+            if (!stateToBlow.isAir(this.level, blockToBlow) && !isFluidBlock) {
                BlockPos blockToBlowImm = blockToBlow.immutable();
                //this.level.getProfiler().push("explosion_blocks");
                if (/*stateToBlow.canDropFromExplosion(this.level, blockToBlow, this) &&*/ this.level instanceof ServerWorld) {
@@ -232,7 +233,7 @@ public class Vortex {
 
                //stateToBlow.onBlockExploded(this.level, blockToBlow, this);
                // can't use above, so need to recreate the explosion-independent logic in the base impl here
-               this.level.setBlock(blockToBlow, Blocks.AIR.defaultBlockState(), 3);
+               this.level.setBlock(blockToBlow, Blocks.WATER.defaultBlockState(), 3);
 
                //this.level.getProfiler().pop();
             }
@@ -306,14 +307,16 @@ public class Vortex {
       return this.source;
    }
 
-
-
    public Vector3d getPosition() {
       return this.position;
    }
 
    public void setPosition(Vector3d position) {
       this.position = position;
+   }
+
+   public List<Entity> getHitEntities() {
+      return this.hitEntities;
    }
 
    public enum Mode {

@@ -173,7 +173,7 @@ public class ForgeEventHandler {
     static void onDismount(EntityMountEvent event){
         if(!event.isCanceled() && !event.getWorldObj().isClientSide && event.getEntityBeingMounted() instanceof Gobblefin){
             if(event.isDismounting()){
-                ((Gobblefin)event.getEntityBeingMounted()).setThrowingUp();
+                ((Gobblefin)event.getEntityBeingMounted()).setThrowingUp(true);
             }
         }
     }

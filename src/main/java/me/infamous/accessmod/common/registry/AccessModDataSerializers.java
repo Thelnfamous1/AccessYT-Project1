@@ -1,7 +1,7 @@
 package me.infamous.accessmod.common.registry;
 
 import me.infamous.accessmod.AccessMod;
-import me.infamous.accessmod.common.entity.ai.eater.Eater;
+import me.infamous.accessmod.common.entity.ai.eater.VortexEater;
 import me.infamous.accessmod.common.entity.ai.digger.Digger;
 import me.infamous.accessmod.common.entity.ai.disguise.AnimatableDisguise;
 import net.minecraft.network.PacketBuffer;
@@ -48,19 +48,19 @@ public class AccessModDataSerializers {
             return pValue;
         }
     }));
-    public static final RegistryObject<DataSerializerEntry> EAT_STATE = DATA_SERIALIZERS.register("eat_state", () -> new DataSerializerEntry(new IDataSerializer<Eater.EatState>() {
+    public static final RegistryObject<DataSerializerEntry> EAT_STATE = DATA_SERIALIZERS.register("eat_state", () -> new DataSerializerEntry(new IDataSerializer<VortexEater.EatState>() {
         @Override
-        public void write(PacketBuffer pBuffer, Eater.EatState pValue) {
+        public void write(PacketBuffer pBuffer, VortexEater.EatState pValue) {
             pBuffer.writeEnum(pValue);
         }
 
         @Override
-        public Eater.EatState read(PacketBuffer pBuffer) {
-            return pBuffer.readEnum(Eater.EatState.class);
+        public VortexEater.EatState read(PacketBuffer pBuffer) {
+            return pBuffer.readEnum(VortexEater.EatState.class);
         }
 
         @Override
-        public Eater.EatState copy(Eater.EatState pValue) {
+        public VortexEater.EatState copy(VortexEater.EatState pValue) {
             return pValue;
         }
     }));

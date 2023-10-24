@@ -29,16 +29,16 @@ public class ServerboundGobblefinControlPacket {
                 Gobblefin vehicle = (Gobblefin) sender.getVehicle();
                 switch (packet.control){
                     case GOBBLEFIN_START_BOOST:
-                        vehicle.startPlayerBoosting();
+                        vehicle.startManualBoosting();
                         break;
                     case GOBBLEFIN_STOP_BOOST:
-                        vehicle.stopPlayerBoosting();
+                        vehicle.stopManualBoosting();
                         break;
                     case GOBBLEFIN_START_VORTEX:
-                        vehicle.startPlayerVortex();
+                        vehicle.startManualVortex();
                         break;
                     case GOBBLEFIN_STOP_VORTEX:
-                        vehicle.stopPlayerVortex();
+                        vehicle.stopManualVortex();
                         break;
                     default:
                         throw new IllegalStateException("Invalid enum for ServerboundGobblefinControlPacket: " + packet.control);

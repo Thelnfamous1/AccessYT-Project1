@@ -110,11 +110,6 @@ public class AccessModUtil {
                 pSpeed);
     }
 
-    public static Vector3d getRandomNearbyPos(CreatureEntity creature) {
-        Vector3d vector3d = RandomPositionGenerator.getLandPos(creature, 4, 2);
-        return vector3d == null ? creature.position() : vector3d;
-    }
-
     public static void throwItemsTowardRandomPos(CreatureEntity mob, List<ItemStack> items) {
         throwItemsTowardPos(mob, items, getRandomNearbyPos(mob));
     }
@@ -127,6 +122,11 @@ public class AccessModUtil {
                 BrainUtil.throwItem(mob, item, throwTargetPos.add(0.0D, 1.0D, 0.0D));
             }
         }
+    }
+
+    public static Vector3d getRandomNearbyPos(CreatureEntity creature) {
+        Vector3d vector3d = RandomPositionGenerator.getLandPos(creature, 4, 2);
+        return vector3d == null ? creature.position() : vector3d;
     }
 
     public static ItemStack removeOneItemFromItemEntity(ItemEntity itemEntity) {
