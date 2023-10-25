@@ -15,26 +15,27 @@ public interface VortexEater{
     default void setMouthOpen(){
         this.setEatState(EatState.MOUTH_OPEN);
         this.setEatActionTimer(this.getEatActionDuration(EatState.MOUTH_OPEN));
+        this.setActiveVortex(null);
     }
 
     default boolean isMouthClosed(){
         return this.getEatState() == EatState.MOUTH_CLOSED;
     }
 
-    default void setMouthClosed(boolean clearVortex){
+    default void setMouthClosed(){
         this.setEatState(EatState.MOUTH_CLOSED);
         this.setEatActionTimer(this.getEatActionDuration(EatState.MOUTH_CLOSED));
-        if(clearVortex) this.setActiveVortex(null);
+        this.setActiveVortex(null);
     }
 
     default boolean isSuckingUp(){
         return this.getEatState() == EatState.SUCKING_UP;
     }
 
-    default void setSuckingUp(boolean createVortex){
+    default void setSuckingUp(boolean breakBlocks){
         this.setEatState(EatState.SUCKING_UP);
         this.setEatActionTimer(this.getEatActionDuration(EatState.SUCKING_UP));
-        if(createVortex) this.setActiveVortex(this.createDefaultVortex());
+        this.setActiveVortex(this.createDefaultVortex(breakBlocks));
     }
 
     default boolean isSwallowing(){
@@ -50,31 +51,31 @@ public interface VortexEater{
         return this.getEatState() == EatState.THROWING_UP;
     }
 
-    default void setThrowingUp(boolean clearVortex){
+    default void setThrowingUp(){
         this.setEatState(EatState.THROWING_UP);
         this.setEatActionTimer(this.getEatActionDuration(EatState.THROWING_UP));
-        if(clearVortex) this.setActiveVortex(null);
+        this.setActiveVortex(null);
     }
 
-    default void updateEating(boolean loop, float maxDistToEat) {
+    default void updateEating(boolean manual) {
         if(this.getEatActionTimer() > 0){
             this.setEatActionTimer(this.getEatActionTimer() - 1);
             if(this.getEatActionTimer() == 0){
                 if(this.isSuckingUp()){
                     this.setSwallowing();
                 } else if(this.isSwallowing()){
-                    if(loop) {
+                    if(manual) {
                         this.setSuckingUp(true);
                     } else{
                         // reset
-                        this.setMouthClosed(true);
+                        this.setMouthClosed();
                     }
                 } else if(this.isThrowingUp()){
-                    if(loop) {
+                    if(manual) {
                         this.setSuckingUp(true);
                     } else{
                         // reset
-                        this.setMouthClosed(true);
+                        this.setMouthClosed();
                     }
                 }
             }
@@ -85,14 +86,16 @@ public interface VortexEater{
             this.getActiveVortex().tick();
             if(this.isSwallowing() && this.getEatActionTimer() == this.getEatActionPoint(EatState.SWALLOWING)){
                 this.playEatSound();
-                this.getActiveVortex().getHitEntities().forEach(hitEntity -> {
-                    if(this.canEat(hitEntity) && hitEntity.distanceToSqr(mouthPosition) < maxDistToEat){
-                        this.eat(hitEntity);
+                this.getActiveVortex().getHitEntities().forEach(target -> {
+                    if(this.canEat(target) && this.isWithinEatRange(target)){
+                        this.eat(target);
                     }
                 });
             }
         }
     }
+
+    boolean isWithinEatRange(Entity target);
 
     void playEatSound();
 
@@ -115,11 +118,11 @@ public interface VortexEater{
 
     void setActiveVortex(@Nullable Vortex vortex);
 
-    Vortex createDefaultVortex();
+    Vortex createDefaultVortex(boolean breakBlocks);
 
-    boolean canEat(Entity entity);
+    boolean canEat(Entity target);
 
-    void eat(Entity entity);
+    void eat(Entity target);
 
     enum EatState {
         MOUTH_CLOSED(false),
