@@ -3,9 +3,9 @@ package me.infamous.accessmod.common.entity.ai.eater;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.ai.goal.Goal;
-import net.minecraft.entity.item.ItemEntity;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -37,7 +37,7 @@ public class VortexEatGoal<T extends MobEntity & VortexEater> extends Goal {
         } else if (this.nextEatTime > this.mob.tickCount) {
             return false;
         } else {
-            this.nearbyTargets = this.findAndCacheNearbyTargets(false);
+            this.nearbyTargets = this.getNearbyTargets(false);
             return !this.nearbyTargets.isEmpty() && this.mob.getLastHurtByMob() == null;
         }
     }
@@ -46,12 +46,14 @@ public class VortexEatGoal<T extends MobEntity & VortexEater> extends Goal {
         return this.mob.isVehicle() && this.mob.canBeControlledByRider();
     }
 
-    private List<? extends Entity> findAndCacheNearbyTargets(boolean ignoreCooldown) {
+    private List<? extends Entity> getNearbyTargets(boolean ignoreCooldown) {
         if (--this.searchCooldown <= 0L || ignoreCooldown) {
             this.searchCooldown = this.searchRate;
             // Don't convert the canEat call to a method reference, as that causes an exception with intersection types such as the 'T' type used for the mob instance field
             //noinspection Convert2MethodRef
-            return this.mob.level.getEntitiesOfClass(ItemEntity.class, this.mob.getBoundingBox().inflate(this.searchDistance, this.searchDistance, this.searchDistance), e -> this.mob.canEat(e));
+            List<Entity> nearbyTargets = this.mob.level.getEntities(this.mob, this.mob.getBoundingBox().inflate(this.searchDistance, this.searchDistance, this.searchDistance), e -> this.mob.canEat(e));
+            nearbyTargets.sort(Comparator.comparing(this.mob::distanceToSqr));
+            return nearbyTargets;
         }
         return this.nearbyTargets;
     }
@@ -59,7 +61,7 @@ public class VortexEatGoal<T extends MobEntity & VortexEater> extends Goal {
     @Override
     public void start() {
         this.mob.setMouthOpen();
-        this.nearbyTargets = this.findAndCacheNearbyTargets(false);
+        this.nearbyTargets = this.getNearbyTargets(false);
         if (!this.nearbyTargets.isEmpty()) {
             this.mob.getNavigation().moveTo(this.nearbyTargets.get(0), this.speedModifier);
         }
@@ -68,37 +70,16 @@ public class VortexEatGoal<T extends MobEntity & VortexEater> extends Goal {
 
     @Override
     public void tick() {
-        this.nearbyTargets = this.findAndCacheNearbyTargets(false);
-
-        if (!this.nearbyTargets.isEmpty()) {
-            Entity target = this.nearbyTargets.get(0);
-            switch (this.mob.getEatState()){
-                case MOUTH_OPEN:
-                    if(this.mob.isWithinEatRange(target)){
-                        this.stopAndLookAtTarget(target);
-                        this.mob.setSuckingUp(false);
-                    } else{
-                        this.pursueTarget(target);
-                    }
-                    break;
-                case SUCKING_UP:
-                    if(this.mob.isWithinEatRange(target)){
-                        this.stopAndLookAtTarget(target);
-                        // mob should be automatically transitioning to swallowing
-                    } else{
-                        this.pursueTarget(target);
-                    }
-                    break;
-                case SWALLOWING:
-                    if(this.mob.isWithinEatRange(target)){
-                        // mob should be automatically transitioning to open/closed
-                    } else{
-                        this.pursueTarget(target);
-                    }
-                    break;
-                case MOUTH_CLOSED:
-                    this.setOnEatCooldown();
-                    break;
+        if (this.mob.isMouthOpen()) {
+            this.nearbyTargets = this.getNearbyTargets(false);
+            if (!this.nearbyTargets.isEmpty()) {
+                Entity nearestTarget = this.nearbyTargets.get(0);
+                if (this.mob.isWithinVortexRange(nearestTarget)) {
+                    this.stopAndLookAtTarget(nearestTarget);
+                    this.mob.setSuckingUp(false);
+                } else {
+                    this.pursueTarget(nearestTarget);
+                }
             }
         }
     }
@@ -108,7 +89,6 @@ public class VortexEatGoal<T extends MobEntity & VortexEater> extends Goal {
     }
 
     private void pursueTarget(Entity target) {
-        this.mob.setMouthOpen();
         this.mob.getNavigation().moveTo(target, this.speedModifier);
     }
 
@@ -119,7 +99,7 @@ public class VortexEatGoal<T extends MobEntity & VortexEater> extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return super.canContinueToUse();
+        return super.canContinueToUse() && !this.mob.isMouthClosed();
     }
 
     @Override
@@ -127,7 +107,7 @@ public class VortexEatGoal<T extends MobEntity & VortexEater> extends Goal {
         if(!this.mob.isThrowingUp() && !this.riderControlsEating()){
             this.mob.setMouthClosed();
         }
-        if(this.nextEatTime <= 0) this.setOnEatCooldown();
+        this.setOnEatCooldown();
     }
 
 }

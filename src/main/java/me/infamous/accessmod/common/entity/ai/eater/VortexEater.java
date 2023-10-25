@@ -8,6 +8,8 @@ import javax.annotation.Nullable;
 
 public interface VortexEater{
 
+    byte VORTEX_EVENT_ID = 21;
+
     default boolean isMouthOpen(){
         return this.getEatState() == EatState.MOUTH_OPEN;
     }
@@ -57,10 +59,10 @@ public interface VortexEater{
         this.setActiveVortex(null);
     }
 
-    default void updateEating(boolean manual) {
+    default void updateEating(boolean isServerSide, boolean manual) {
         if(this.getEatActionTimer() > 0){
             this.setEatActionTimer(this.getEatActionTimer() - 1);
-            if(this.getEatActionTimer() == 0){
+            if(this.getEatActionTimer() == 0 && isServerSide){
                 if(this.isSuckingUp()){
                     this.setSwallowing();
                 } else if(this.isSwallowing()){
@@ -80,8 +82,8 @@ public interface VortexEater{
                 }
             }
         }
-        Vector3d mouthPosition = this.getMouthPosition();
-        if(this.getActiveVortex() != null){
+        if(this.getActiveVortex() != null && isServerSide){
+            Vector3d mouthPosition = this.getMouthPosition();
             this.getActiveVortex().setPosition(mouthPosition);
             this.getActiveVortex().tick();
             if(this.isSwallowing() && this.getEatActionTimer() == this.getEatActionPoint(EatState.SWALLOWING)){
@@ -96,6 +98,8 @@ public interface VortexEater{
     }
 
     boolean isWithinEatRange(Entity target);
+
+    boolean isWithinVortexRange(Entity target);
 
     void playEatSound();
 
@@ -123,6 +127,11 @@ public interface VortexEater{
     boolean canEat(Entity target);
 
     void eat(Entity target);
+
+    default float getVortexAnimationScale(float partialTicks){
+        int suckingUpDuration = this.getEatActionDuration(EatState.SUCKING_UP);
+        return ((float)(suckingUpDuration - this.getEatActionTimer()) + partialTicks) / (float) suckingUpDuration;
+    }
 
     enum EatState {
         MOUTH_CLOSED(false),

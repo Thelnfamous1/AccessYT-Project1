@@ -1,7 +1,6 @@
 package me.infamous.accessmod.common.entity.gobblefin;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -13,7 +12,6 @@ import net.minecraft.block.FlowingFluidBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.item.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.loot.LootContext;
@@ -32,7 +30,9 @@ import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 public class Vortex {
    private static final ExplosionContext EXPLOSION_DAMAGE_CALCULATOR = new ExplosionContext();
@@ -45,7 +45,6 @@ public class Vortex {
    private final DamageSource damageSource;
    private final ExplosionContext damageCalculator;
    private final List<BlockPos> blocksToBlow = Lists.newArrayList();
-   private final Map<PlayerEntity, Vector3d> hitPlayers = Maps.newHashMap();
    private Vector3d position;
    private List<Entity> hitEntities = Lists.newArrayList();
 
@@ -106,25 +105,17 @@ public class Vortex {
       });
 
       for (Entity hitEntity : this.hitEntities) {
-         if (!hitEntity.ignoreExplosion()) {
-            double xDist = sourcePos.x - hitEntity.getX();
-            double yDist = sourcePos.y - hitEntity.getEyeY();
-            double zDist = sourcePos.z - hitEntity.getZ();
-            double dist = MathHelper.sqrt(xDist * xDist + yDist * yDist + zDist * zDist);
-            if (dist != 0.0D) {
-               xDist = xDist / dist;
-               yDist = yDist / dist;
-               zDist = zDist / dist;
+         double xDist = sourcePos.x - hitEntity.getX();
+         double yDist = sourcePos.y - hitEntity.getEyeY();
+         double zDist = sourcePos.z - hitEntity.getZ();
+         double dist = MathHelper.sqrt(xDist * xDist + yDist * yDist + zDist * zDist);
+         if (dist != 0.0D) {
+            xDist = xDist / dist;
+            yDist = yDist / dist;
+            zDist = zDist / dist;
 
-               double velocityScale = 0.025D; // we want to move the target at a speed of one block per 40 ticks
-               hitEntity.push(xDist * velocityScale, yDist * velocityScale, zDist * velocityScale);
-               if (hitEntity instanceof PlayerEntity) {
-                  PlayerEntity hitPlayer = (PlayerEntity) hitEntity;
-                  if (!hitPlayer.isSpectator() && (!hitPlayer.isCreative() || !hitPlayer.abilities.flying)) {
-                     this.hitPlayers.put(hitPlayer, new Vector3d(xDist * velocityScale, yDist * velocityScale, zDist * velocityScale));
-                  }
-               }
-            }
+            double velocityScale = 0.025D * this.radius; // we want to move the target at a speed of one block per 40 ticks at base
+            hitEntity.push(xDist * velocityScale, yDist * velocityScale, zDist * velocityScale);
          }
       }
    }
@@ -244,14 +235,6 @@ public class Vortex {
 
    public DamageSource getDamageSource() {
       return this.damageSource;
-   }
-
-   public Map<PlayerEntity, Vector3d> getHitPlayers() {
-      return this.hitPlayers;
-   }
-
-   public Optional<Vector3d> getPlayerHitVec(PlayerEntity player){
-      return Optional.ofNullable(this.hitPlayers.get(player));
    }
 
    @Nullable

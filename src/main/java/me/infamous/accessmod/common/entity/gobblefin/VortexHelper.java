@@ -33,8 +33,7 @@ public class VortexHelper {
 
             for(ServerPlayerEntity player : ((ServerWorld)level).players()) {
                 if (player.distanceToSqr(position) < 4096.0D) {
-                    AccessModNetwork.SYNC_CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                            new ClientboundVortexPacket(position, vortexRadius, vortex.getBlocksToBlow(), vortex.getPlayerHitVec(player).orElse(null)));
+                    AccessModNetwork.SYNC_CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ClientboundVortexPacket(position, vortexRadius, vortex.getBlocksToBlow()));
                 }
             }
         }
@@ -45,8 +44,5 @@ public class VortexHelper {
     public static void createClientVortex(ClientboundVortexPacket packet, World level, @Nullable PlayerEntity player) {
        Vortex vortex = new Vortex(level, null, packet.getPosition(), packet.getPower(), packet.getBlocksToBlow());
        vortex.finalizeVortex(true);
-       if(player != null){
-          player.setDeltaMovement(player.getDeltaMovement().add(packet.getKnockbackX(), packet.getKnockbackY(), packet.getKnockbackZ()));
-       }
     }
 }
