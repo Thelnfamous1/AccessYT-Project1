@@ -108,6 +108,11 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     }
 
     @Override
+    public boolean removeWhenFarAway(double pDistanceToClosestPlayer) {
+        return !this.isPersistenceRequired();
+    }
+
+    @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DATA_EAT_STATE, EatState.MOUTH_CLOSED);
@@ -632,6 +637,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
             if(!remainder.isEmpty()) {
                 this.spawnAtLocation(remainder);
             }
+            this.setPersistenceRequired();
         } else if(target instanceof PlayerEntity){
             this.doPlayerRide((PlayerEntity) target);
         } else{
