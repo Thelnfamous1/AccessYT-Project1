@@ -29,7 +29,7 @@ public class VortexSound<T extends Entity & VortexEater> extends TickableSound {
 
    @Override
    public void tick() {
-      if (this.vortexEater.isAlive() && this.vortexEater.isSuckingUp()) {
+      if (this.vortexEater.isAlive() && this.vortexEater.isVortexActive()) {
          this.x = (float)this.vortexEater.getX();
          this.y = (float)this.vortexEater.getY();
          this.z = (float)this.vortexEater.getZ();

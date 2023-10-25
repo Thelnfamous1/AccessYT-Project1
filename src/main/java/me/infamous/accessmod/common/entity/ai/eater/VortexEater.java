@@ -3,6 +3,7 @@ package me.infamous.accessmod.common.entity.ai.eater;
 import me.infamous.accessmod.common.entity.gobblefin.Vortex;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.World;
 
 import javax.annotation.Nullable;
 
@@ -16,7 +17,7 @@ public interface VortexEater{
 
     default void setMouthOpen(){
         this.setEatState(EatState.MOUTH_OPEN);
-        this.setEatActionTimer(this.getEatActionDuration(EatState.MOUTH_OPEN));
+        this.startEatStateTimer();
         this.setActiveVortex(null);
     }
 
@@ -26,7 +27,7 @@ public interface VortexEater{
 
     default void setMouthClosed(){
         this.setEatState(EatState.MOUTH_CLOSED);
-        this.setEatActionTimer(this.getEatActionDuration(EatState.MOUTH_CLOSED));
+        this.startEatStateTimer();
         this.setActiveVortex(null);
     }
 
@@ -36,7 +37,7 @@ public interface VortexEater{
 
     default void setSuckingUp(boolean breakBlocks){
         this.setEatState(EatState.SUCKING_UP);
-        this.setEatActionTimer(this.getEatActionDuration(EatState.SUCKING_UP));
+        this.startEatStateTimer();
         this.setActiveVortex(this.createDefaultVortex(breakBlocks));
     }
 
@@ -46,7 +47,7 @@ public interface VortexEater{
 
     default void setSwallowing(){
         this.setEatState(EatState.SWALLOWING);
-        this.setEatActionTimer(this.getEatActionDuration(EatState.SWALLOWING));
+        this.startEatStateTimer();
     }
 
     default boolean isThrowingUp(){
@@ -55,14 +56,21 @@ public interface VortexEater{
 
     default void setThrowingUp(){
         this.setEatState(EatState.THROWING_UP);
-        this.setEatActionTimer(this.getEatActionDuration(EatState.THROWING_UP));
+        this.startEatStateTimer();
         this.setActiveVortex(null);
     }
 
-    default void updateEating(boolean isServerSide, boolean manual) {
-        if(this.getEatActionTimer() > 0){
-            this.setEatActionTimer(this.getEatActionTimer() - 1);
-            if(this.getEatActionTimer() == 0 && isServerSide){
+    default void updateEating(World level, boolean manual) {
+        if(this.isVortexActive() && level.isClientSide){
+            int activeVortexTicks = this.getActiveVortexTicks();
+            if (activeVortexTicks < this.getVortexDuration()) {
+                this.setActiveVortexTicks(activeVortexTicks + 1);
+            }
+        }
+
+        if(this.getEatStateTimer() > 0){
+            this.setEatStateTimer(this.getEatStateTimer() - 1);
+            if(this.getEatStateTimer() == 0 && !level.isClientSide){
                 if(this.isSuckingUp()){
                     this.setSwallowing();
                 } else if(this.isSwallowing()){
@@ -82,11 +90,11 @@ public interface VortexEater{
                 }
             }
         }
-        if(this.getActiveVortex() != null && isServerSide){
+        if(this.getActiveVortex() != null && !level.isClientSide){
             Vector3d mouthPosition = this.getMouthPosition();
             this.getActiveVortex().setPosition(mouthPosition);
             this.getActiveVortex().tick();
-            if(this.isSwallowing() && this.getEatActionTimer() == this.getEatActionPoint(EatState.SWALLOWING)){
+            if(this.isSwallowing() && this.getEatStateTimer() == this.getEatActionPoint(EatState.SWALLOWING)){
                 this.playEatSound();
                 this.getActiveVortex().getHitEntities().forEach(target -> {
                     if(this.canEat(target) && this.isWithinEatRange(target)){
@@ -96,6 +104,8 @@ public interface VortexEater{
             }
         }
     }
+
+    int getVortexDuration();
 
     boolean isWithinEatRange(Entity target);
 
@@ -107,15 +117,21 @@ public interface VortexEater{
 
     void setEatState(EatState eatState);
 
-    int getEatActionTimer();
+    int getEatStateTimer();
 
-    void setEatActionTimer(int eatActionTimer);
+    void setEatStateTimer(int eatActionTimer);
 
-    int getEatActionDuration(EatState eatState);
+    default void startEatStateTimer(){
+        this.setEatStateTimer(this.getEatStateDuration(this.getEatState()));
+    }
+
+    int getEatStateDuration(EatState eatState);
 
     int getEatActionPoint(EatState eatState);
 
     Vector3d getMouthPosition();
+
+    boolean isVortexActive();
 
     @Nullable
     Vortex getActiveVortex();
@@ -129,9 +145,12 @@ public interface VortexEater{
     void eat(Entity target);
 
     default float getVortexAnimationScale(float partialTicks){
-        int suckingUpDuration = this.getEatActionDuration(EatState.SUCKING_UP);
-        return ((float)(suckingUpDuration - this.getEatActionTimer()) + partialTicks) / (float) suckingUpDuration;
+        return ((float)(this.getActiveVortexTicks()) + partialTicks) / (float) this.getVortexDuration();
     }
+
+    void setActiveVortexTicks(int activeVortexTicks);
+
+    int getActiveVortexTicks();
 
     enum EatState {
         MOUTH_CLOSED(false),

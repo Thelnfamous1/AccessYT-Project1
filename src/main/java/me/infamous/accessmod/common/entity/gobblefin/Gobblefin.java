@@ -15,6 +15,7 @@ import net.minecraft.entity.ai.controller.DolphinLookController;
 import net.minecraft.entity.ai.goal.*;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.monster.GuardianEntity;
+import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.WaterMobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
@@ -76,10 +77,11 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
 
 
     private final Inventory inventory = new Inventory(8);
-    private int eatActionTimer;
+    private int eatStateTimer;
     private boolean manualBoosting;
     private boolean manualVortex;
     private Vortex vortex;
+    private int activeVortexTicks;
 
     public Gobblefin(EntityType<? extends Gobblefin> type, World world) {
         super(type, world);
@@ -119,8 +121,8 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     @Override
     public void onSyncedDataUpdated(DataParameter<?> pKey) {
         super.onSyncedDataUpdated(pKey);
-        if(pKey.equals(DATA_EAT_STATE)){
-            this.setEatActionTimer(this.getEatActionDuration(this.getEatState()));
+        if(pKey.equals(DATA_IS_VORTEX_ACTIVE)){
+            this.setActiveVortexTicks(0);
         }
     }
 
@@ -220,10 +222,11 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
 
     protected void doPlayerRide(PlayerEntity pPlayer) {
         if (!this.level.isClientSide) {
-            pPlayer.yRot = this.yRot;
-            pPlayer.xRot = this.xRot;
-            pPlayer.startRiding(this);
-            this.setSwallowing();
+            if(pPlayer.startRiding(this)){
+                pPlayer.yRot = this.yRot;
+                pPlayer.xRot = this.xRot;
+                this.setSwallowing();
+            }
         }
     }
 
@@ -286,7 +289,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     @Override
     public void aiStep() {
         super.aiStep();
-        this.updateEating(!this.level.isClientSide, this.manualVortex);
+        this.updateEating(this.level, this.manualVortex);
     }
 
     @Override
@@ -384,6 +387,33 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     @Override
     protected boolean canRide(Entity pEntity) {
         return true;
+    }
+
+    @Override
+    protected boolean canAddPassenger(Entity pPassenger) {
+        return this.getPassengers().size() < 2;
+    }
+
+    @Override
+    public void positionRider(Entity pPassenger) {
+        int passengerIdx = this.getPassengers().indexOf(pPassenger);
+        if (passengerIdx >= 0) {
+            boolean isControllingPassenger = passengerIdx == 0;
+            float zOffset = 0.5F;
+            double yOffset = this.getPassengersRidingOffset() + pPassenger.getMyRidingOffset();
+            if (this.getPassengers().size() > 1) {
+                if (!isControllingPassenger) {
+                    zOffset = -0.7F;
+                }
+
+                if (pPassenger instanceof AnimalEntity) {
+                    zOffset += 0.2F;
+                }
+            }
+
+            Vector3d rideOffset = (new Vector3d(0.0D, 0.0D, zOffset)).yRot(-this.yBodyRot * AccessModUtil.TO_RADIANS);
+            pPassenger.setPos(this.getX() + rideOffset.x, this.getY() + yOffset, this.getZ() + rideOffset.z);
+        }
     }
 
     @Override
@@ -547,13 +577,13 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     }
 
     @Override
-    public int getEatActionTimer() {
-        return this.eatActionTimer;
+    public int getEatStateTimer() {
+        return this.eatStateTimer;
     }
 
     @Override
-    public void setEatActionTimer(int eatActionTimer) {
-        this.eatActionTimer = eatActionTimer;
+    public void setEatStateTimer(int eatActionTimer) {
+        this.eatStateTimer = eatActionTimer;
     }
 
     @Override
@@ -602,12 +632,24 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
             if(!remainder.isEmpty()) {
                 this.spawnAtLocation(remainder);
             }
+        } else if(target instanceof PlayerEntity){
+            this.doPlayerRide((PlayerEntity) target);
         } else{
-            this.doHurtTarget(target);
+            target.hurt(DamageSource.mobAttack(this), Float.MAX_VALUE); // insta-kill mobs
             if (!target.isAlive()) {
                 target.remove();
             }
         }
+    }
+
+    @Override
+    public void setActiveVortexTicks(int activeVortexTicks) {
+        this.activeVortexTicks = activeVortexTicks;
+    }
+
+    @Override
+    public int getActiveVortexTicks() {
+        return this.activeVortexTicks;
     }
 
     private ItemStack riderTakeItem(PlayerEntity player, ItemStack toTake){
@@ -630,6 +672,11 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     }
 
     @Override
+    public boolean isVortexActive() {
+        return this.entityData.get(DATA_IS_VORTEX_ACTIVE);
+    }
+
+    @Override
     public Vector3d getMouthPosition(){
         Vector3d lookAngle = this.getLookAngle();
         float width = this.getBbWidth();
@@ -645,7 +692,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     }
 
     @Override
-    public int getEatActionDuration(EatState eatState) {
+    public int getEatStateDuration(EatState eatState) {
         switch(eatState){
             case SUCKING_UP:
                 return SUCK_UP_DURATION;
@@ -660,6 +707,11 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     @Override
     public void playEatSound() {
         this.playSound(SoundEvents.DOLPHIN_EAT, 1.0F, 1.0F);
+    }
+
+    @Override
+    public int getVortexDuration() {
+        return this.getEatStateDuration(EatState.SUCKING_UP) + this.getEatStateDuration(EatState.SWALLOWING);
     }
 
     @Override

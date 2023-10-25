@@ -28,7 +28,8 @@ public class ClientPlayNetHandlerMixin {
         if (entity instanceof VortexEater) {
             if (pPacket.getEventId() == VortexEater.VORTEX_EVENT_ID) {
                 ci.cancel();
-                this.minecraft.getSoundManager().play(VortexSound.hackyCreate((VortexEater) entity));
+                VortexEater vortexEater = (VortexEater) entity;
+                this.minecraft.getSoundManager().play(VortexSound.hackyCreate(vortexEater));
             }
         }
     }
