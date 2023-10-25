@@ -2,19 +2,19 @@ package me.infamous.accessmod.common.entity.gobblefin;
 
 public class SimpleTicker {
 
-    private int ticks;
+    private int ticksLeft;
 
-    public SimpleTicker(int ticks){
-        this.ticks = ticks;
+    public SimpleTicker(int ticksLeft){
+        this.ticksLeft = ticksLeft;
     }
 
     public void tick(){
-        if(this.ticks > 0){
-            this.ticks--;
+        if(this.ticksLeft > 0){
+            this.ticksLeft--;
         }
     }
 
     public boolean isActive(){
-        return this.ticks > 0;
+        return this.ticksLeft > 0;
     }
 }

@@ -19,6 +19,7 @@
     "MobEntityMixin"
   ],
   "client": [
+    "ClientPlayerEntityMixin",
     "ClientPlayNetHandlerMixin",
     "IngameGuiAccessor",
     "LivingRendererMixin",

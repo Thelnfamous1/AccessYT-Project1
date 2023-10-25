@@ -17,6 +17,7 @@ import me.infamous.accessmod.duck.DuneSinker;
 import me.infamous.accessmod.duck.Summonable;
 import me.infamous.accessmod.mixin.GoalSelectorAccesor;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
@@ -25,6 +26,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.pathfinding.FlyingPathNavigator;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.EntityPredicates;
 import net.minecraft.util.Hand;
 import net.minecraft.util.RegistryKey;
 import net.minecraft.util.ResourceLocation;
@@ -189,10 +191,11 @@ public class ForgeEventHandler {
         if(!event.isCanceled() && event.getEntityBeingMounted() instanceof Gobblefin){
             Gobblefin gobblefin = (Gobblefin) event.getEntityBeingMounted();
             if(event.isDismounting()){
-                if(gobblefin.isTrappedPassenger(event.getEntityMounting())){
+                Entity rider = event.getEntityMounting();
+                if(gobblefin.isTrappedPassenger(rider) && EntityPredicates.NO_CREATIVE_OR_SPECTATOR.test(rider)){
                     event.setCanceled(true);
-                } else if(!event.getWorldObj().isClientSide){
-                    ((Gobblefin)event.getEntityBeingMounted()).setThrowingUp();
+                } else if(!event.getWorldObj().isClientSide && !gobblefin.isThrowingUp()){
+                    gobblefin.setThrowingUp();
                 }
             }
         }

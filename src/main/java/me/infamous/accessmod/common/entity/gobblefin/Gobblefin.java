@@ -253,12 +253,17 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     }
 
     @Override
-    public boolean startRiding(Entity pEntity, boolean pForce) {
-        boolean startRiding = super.startRiding(pEntity, pForce);
-        if(pEntity instanceof LivingEntity && !this.isOwnedBy((LivingEntity) pEntity, this.level)){
-            this.trappedPassengers.put(pEntity.getUUID(), new SimpleTicker(1200));
+    protected void addPassenger(Entity pPassenger) {
+        super.addPassenger(pPassenger);
+        if(pPassenger instanceof LivingEntity && !this.isOwnedBy((LivingEntity) pPassenger, this.level)){
+            this.trappedPassengers.put(pPassenger.getUUID(), new SimpleTicker(1200));
         }
-        return startRiding;
+    }
+
+    @Override
+    protected void removePassenger(Entity pPassenger) {
+        super.removePassenger(pPassenger);
+        this.trappedPassengers.remove(pPassenger.getUUID());
     }
 
     // various method overrides associated with TameableEntity
