@@ -11,11 +11,13 @@ import me.infamous.accessmod.common.entity.gobblefin.Gobblefin;
 import me.infamous.accessmod.common.item.SoulScytheItem;
 import me.infamous.accessmod.common.network.AccessModNetwork;
 import me.infamous.accessmod.common.network.ServerboundDuneJumpPacket;
+import me.infamous.accessmod.common.registry.AccessModEntityTypes;
 import me.infamous.accessmod.common.spawner.LurkerSpawner;
 import me.infamous.accessmod.duck.DuneSinker;
 import me.infamous.accessmod.duck.Summonable;
 import me.infamous.accessmod.mixin.GoalSelectorAccesor;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
+import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
@@ -25,10 +27,15 @@ import net.minecraft.pathfinding.FlyingPathNavigator;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Hand;
 import net.minecraft.util.RegistryKey;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.World;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.MobSpawnInfo;
 import net.minecraft.world.server.ServerWorld;
 import net.minecraft.world.spawner.ISpecialSpawner;
+import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
@@ -38,6 +45,7 @@ import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.living.LivingExperienceDropEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.world.BiomeLoadingEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.LogicalSide;
@@ -72,15 +80,22 @@ public class ForgeEventHandler {
         return server.getWorldData().getDifficulty() != Difficulty.PEACEFUL;
     }
 
-    /*
+
     @SubscribeEvent(priority = EventPriority.HIGH)
     static void onBiomeLoading(BiomeLoadingEvent event){
-        if(event.getCategory() == Biome.Category.DESERT){
-            event.getSpawns().getSpawner(EntityClassification.MONSTER)
-                    .add(new MobSpawnInfo.Spawners(AccessModEntityTypes.DUNE.get(), 19, 1, 1));
+        ResourceLocation biomeName = event.getName();
+        if(biomeName == null) return;
+
+        RegistryKey<Biome> biomeKey = RegistryKey.create(Registry.BIOME_REGISTRY, biomeName);
+        if(BiomeDictionary.hasType(biomeKey, BiomeDictionary.Type.OVERWORLD)
+                && BiomeDictionary.hasType(biomeKey, BiomeDictionary.Type.OCEAN)
+                && !BiomeDictionary.hasType(biomeKey, BiomeDictionary.Type.COLD)
+                && biomeName.getPath().contains("deep")){ // looking for overworld deep oceans that are not cold/frozen
+            AccessMod.LOGGER.info("Adding {} spawns to {}", AccessModEntityTypes.GOBBLEFIN.getId(), biomeName);
+            event.getSpawns().getSpawner(EntityClassification.WATER_CREATURE)
+                    .add(new MobSpawnInfo.Spawners(AccessModEntityTypes.GOBBLEFIN.get(), 1, 1, 2));
         }
     }
-     */
 
     @SubscribeEvent
     static void onClientPlayerTick(TickEvent.PlayerTickEvent event){
@@ -171,9 +186,14 @@ public class ForgeEventHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     static void onDismount(EntityMountEvent event){
-        if(!event.isCanceled() && !event.getWorldObj().isClientSide && event.getEntityBeingMounted() instanceof Gobblefin){
+        if(!event.isCanceled() && event.getEntityBeingMounted() instanceof Gobblefin){
+            Gobblefin gobblefin = (Gobblefin) event.getEntityBeingMounted();
             if(event.isDismounting()){
-                ((Gobblefin)event.getEntityBeingMounted()).setThrowingUp();
+                if(gobblefin.isTrappedPassenger(event.getEntityMounting())){
+                    event.setCanceled(true);
+                } else if(!event.getWorldObj().isClientSide){
+                    ((Gobblefin)event.getEntityBeingMounted()).setThrowingUp();
+                }
             }
         }
     }

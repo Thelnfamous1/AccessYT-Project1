@@ -67,6 +67,6 @@ public class ForgeClientEventHandler {
     }
 
     private static void handleGobblefinKey(ClientPlayerEntity player, Consumer<ClientPlayerEntity> keyAction){
-        if(player.getVehicle() instanceof Gobblefin) keyAction.accept(player);
+        if(player.getVehicle() instanceof Gobblefin && ((Gobblefin)player.getVehicle()).isOwnedBy(player, player.level)) keyAction.accept(player);
     }
 }

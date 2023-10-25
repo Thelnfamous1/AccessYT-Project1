@@ -3,7 +3,7 @@ package me.infamous.accessmod.common.entity.gobblefin;
 import me.infamous.accessmod.common.AccessModUtil;
 import me.infamous.accessmod.common.entity.ai.DynamicSwimmer;
 import me.infamous.accessmod.common.entity.ai.InventoryHolder;
-import me.infamous.accessmod.common.entity.ai.OwnableMob;
+import me.infamous.accessmod.common.entity.ai.TameableMob;
 import me.infamous.accessmod.common.entity.ai.eater.Feedable;
 import me.infamous.accessmod.common.entity.ai.eater.VortexEatGoal;
 import me.infamous.accessmod.common.entity.ai.eater.VortexEater;
@@ -18,7 +18,9 @@ import net.minecraft.entity.monster.GuardianEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.passive.WaterMobEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.inventory.Inventory;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.datasync.DataParameter;
@@ -28,15 +30,15 @@ import net.minecraft.particles.IParticleData;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.pathfinding.PathNavigator;
 import net.minecraft.pathfinding.SwimmerPathNavigator;
+import net.minecraft.scoreboard.Team;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.GameRules;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.Biomes;
 import net.minecraftforge.event.ForgeEventFactory;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.PlayState;
@@ -50,8 +52,7 @@ import software.bernie.geckolib3.util.GeckoLibUtil;
 import javax.annotation.Nullable;
 import java.util.*;
 
-public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEater, Feedable, InventoryHolder, OwnableMob, DynamicSwimmer {
-    public static final int HAPPY_EVENT_ID = 38;
+public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEater, Feedable, InventoryHolder, TameableMob, DynamicSwimmer {
     public static final double FAST_SWIM_SPEED_MODIFIER = 1.5D;
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
     protected static final AnimationBuilder IDLE_ANIM = new AnimationBuilder().addAnimation("idle", true);
@@ -71,10 +72,9 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
 
     private static final DataParameter<Optional<UUID>> DATA_ID_OWNER_UUID = EntityDataManager.defineId(Gobblefin.class, DataSerializers.OPTIONAL_UUID);
 
-    private static final DataParameter<Boolean> DATA_GOT_FOOD = EntityDataManager.defineId(Gobblefin.class, DataSerializers.BOOLEAN);
+    private static final DataParameter<Boolean> DATA_TAME = EntityDataManager.defineId(Gobblefin.class, DataSerializers.BOOLEAN);
     private static final DataParameter<Boolean> DATA_SWIMMING_FAST = EntityDataManager.defineId(Gobblefin.class, DataSerializers.BOOLEAN);
     private static final DataParameter<Boolean> DATA_IS_VORTEX_ACTIVE = EntityDataManager.defineId(Gobblefin.class, DataSerializers.BOOLEAN);
-
 
     private final Inventory inventory = new Inventory(8);
     private int eatStateTimer;
@@ -82,6 +82,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     private boolean manualVortex;
     private Vortex vortex;
     private int activeVortexTicks;
+    private final Map<UUID, SimpleTicker> trappedPassengers = new HashMap<>();
 
     public Gobblefin(EntityType<? extends Gobblefin> type, World world) {
         super(type, world);
@@ -99,9 +100,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
 
     public static boolean checkGobblefinSpawnRules(EntityType<Gobblefin> type, IWorld world, SpawnReason spawnReason, BlockPos blockPos, Random random) {
         if (blockPos.getY() > 45 && blockPos.getY() < world.getSeaLevel()) {
-            Optional<RegistryKey<Biome>> biomeName = world.getBiomeName(blockPos);
-            return (!Objects.equals(biomeName, Optional.of(Biomes.OCEAN)) || !Objects.equals(biomeName, Optional.of(Biomes.DEEP_OCEAN)))
-                    && world.getFluidState(blockPos).is(FluidTags.WATER);
+            return world.getFluidState(blockPos).is(FluidTags.WATER);
         } else {
             return false;
         }
@@ -118,7 +117,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
         this.entityData.define(DATA_EAT_STATE, EatState.MOUTH_CLOSED);
         this.entityData.define(DATA_EAT_TARGET_ID, 0);
         this.entityData.define(DATA_ID_OWNER_UUID, Optional.empty());
-        this.entityData.define(DATA_GOT_FOOD, false);
+        this.entityData.define(DATA_TAME, false);
         this.entityData.define(DATA_SWIMMING_FAST, false);
         this.entityData.define(DATA_IS_VORTEX_ACTIVE, false);
     }
@@ -135,14 +134,14 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     public void addAdditionalSaveData(CompoundNBT pCompound) {
         super.addAdditionalSaveData(pCompound);
         this.writeInventory(pCompound);
-        this.writeFedData(pCompound);
+        this.writeOwner(pCompound);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundNBT pCompound) {
         super.readAdditionalSaveData(pCompound);
         this.readInventory(pCompound);
-        this.readFedData(pCompound);
+        this.readOwner(pCompound);
     }
 
     @Override
@@ -202,27 +201,45 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     @Override
     public ActionResultType mobInteract(PlayerEntity pPlayer, Hand pHand) {
         ItemStack itemInHand = pPlayer.getItemInHand(pHand);
-        if (!itemInHand.isEmpty() && this.isFood(itemInHand)) {
-            if (!this.level.isClientSide) {
-                this.playSound(SoundEvents.DOLPHIN_EAT, 1.0F, 1.0F);
+        Item item = itemInHand.getItem();
+        if (this.level.isClientSide) {
+            if (this.isTame() && this.isOwnedBy(pPlayer, this.level)) {
+                return ActionResultType.SUCCESS;
+            } else {
+                return !this.isFood(itemInHand) || !(this.getHealth() < this.getMaxHealth()) && this.isTame() ? ActionResultType.PASS : ActionResultType.SUCCESS;
+            }
+        } else {
+            if (this.isTame()) {
+                if(this.isOwnedBy(pPlayer, this.level)){
+                    if (this.isFood(itemInHand) && this.getHealth() < this.getMaxHealth()) {
+                        if (!pPlayer.abilities.instabuild) {
+                            itemInHand.shrink(1);
+                        }
+
+                        this.heal(item.isEdible() ? (float)item.getFoodProperties().getNutrition() : 1.0F);
+                        return ActionResultType.SUCCESS;
+                    }
+
+                    if(!this.isVehicle()){
+                        this.doPlayerRide(pPlayer);
+                        return ActionResultType.SUCCESS;
+                    }
+
+                }
+            } else if (this.isFood(itemInHand)) {
+                if (!pPlayer.abilities.instabuild) {
+                    itemInHand.shrink(1);
+                }
+
+                this.tame(pPlayer);
+                this.level.broadcastEntityEvent(this, (byte)TameableMob.SUCCESSFUL_TAME_ID);
+
+                this.setPersistenceRequired();
+                return ActionResultType.SUCCESS;
             }
 
-            this.setGotFood(true);
-            if (!pPlayer.abilities.instabuild) {
-                itemInHand.shrink(1);
-            }
-
-            return ActionResultType.sidedSuccess(this.level.isClientSide);
-        }
-
-        if(this.isVehicle()){
             return super.mobInteract(pPlayer, pHand);
-        } else if(this.gotFood()){
-            this.doPlayerRide(pPlayer);
-            return ActionResultType.sidedSuccess(this.level.isClientSide);
         }
-
-        return ActionResultType.PASS;
     }
 
     protected void doPlayerRide(PlayerEntity pPlayer) {
@@ -230,14 +247,63 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
             if(pPlayer.startRiding(this)){
                 pPlayer.yRot = this.yRot;
                 pPlayer.xRot = this.xRot;
-                this.setSwallowing();
+                if(!this.getEatState().isTransitional()) this.setSwallowing();
             }
         }
     }
 
     @Override
-    public void stopRiding() {
-        super.stopRiding();
+    public boolean startRiding(Entity pEntity, boolean pForce) {
+        boolean startRiding = super.startRiding(pEntity, pForce);
+        if(pEntity instanceof LivingEntity && !this.isOwnedBy((LivingEntity) pEntity, this.level)){
+            this.trappedPassengers.put(pEntity.getUUID(), new SimpleTicker(1200));
+        }
+        return startRiding;
+    }
+
+    // various method overrides associated with TameableEntity
+    @Override
+    public boolean canAttack(LivingEntity pTarget) {
+        return !this.isOwnedBy(pTarget, this.level) && super.canAttack(pTarget);
+    }
+
+    @Override
+    public Team getTeam() {
+        if (this.isTame()) {
+            LivingEntity owner = this.getOwner(this.level);
+            if (owner != null) {
+                return owner.getTeam();
+            }
+        }
+
+        return super.getTeam();
+    }
+
+    @Override
+    public boolean isAlliedTo(Entity pEntity) {
+        if (this.isTame()) {
+            LivingEntity owner = this.getOwner(this.level);
+            if (pEntity == owner) {
+                return true;
+            }
+
+            if (owner != null) {
+                return owner.isAlliedTo(pEntity);
+            }
+        } else if (pEntity instanceof Gobblefin) {
+            return this.getTeam() == null && pEntity.getTeam() == null;
+        }
+        return super.isAlliedTo(pEntity);
+    }
+
+    @Override
+    public void die(DamageSource pCause) {
+        LivingEntity owner = this.getOwner(this.level);
+        if (!this.level.isClientSide && this.level.getGameRules().getBoolean(GameRules.RULE_SHOWDEATHMESSAGES) && owner instanceof ServerPlayerEntity) {
+            owner.sendMessage(this.getCombatTracker().getDeathMessage(), Util.NIL_UUID);
+        }
+
+        super.die(pCause);
     }
 
     @Override
@@ -264,6 +330,17 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     @Override
     public void tick() {
         super.tick();
+
+        for (UUID trappedPassenger : this.trappedPassengers.keySet()) {
+            SimpleTicker ticker = this.trappedPassengers.get(trappedPassenger);
+            if (ticker != null) {
+                ticker.tick();
+                if (!ticker.isActive() || trappedPassenger.equals(this.getOwnerUUID())) {
+                    this.trappedPassengers.remove(trappedPassenger);
+                }
+            }
+        }
+
         if (this.isNoAi()) {
         } else {
             if (this.isInWaterRainOrBubble()) {
@@ -313,21 +390,28 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
 
     @Override
     public void handleEntityEvent(byte pId) {
-        if (pId == HAPPY_EVENT_ID) {
-            this.addParticlesAroundSelf(ParticleTypes.HAPPY_VILLAGER);
+        if (pId == SUCCESSFUL_TAME_ID) {
+            this.spawnTamingParticles(true);
+        } else if (pId == FAILED_TAME_ID) {
+            this.spawnTamingParticles(false);
         } else {
             super.handleEntityEvent(pId);
         }
-
     }
 
-    private void addParticlesAroundSelf(IParticleData particleData) {
-        for(int i = 0; i < 7; ++i) {
-            double xSpeed = this.random.nextGaussian() * 0.01D;
-            double ySpeed = this.random.nextGaussian() * 0.01D;
-            double zSpeed = this.random.nextGaussian() * 0.01D;
-            this.level.addParticle(particleData, this.getRandomX(1.0D), this.getRandomY() + 0.2D, this.getRandomZ(1.0D), xSpeed, ySpeed, zSpeed);
+    protected void spawnTamingParticles(boolean successful) {
+        IParticleData particleType = ParticleTypes.HEART;
+        if (!successful) {
+            particleType = ParticleTypes.SMOKE;
         }
+
+        for(int i = 0; i < 7; ++i) {
+            double x = this.random.nextGaussian() * 0.02D;
+            double y = this.random.nextGaussian() * 0.02D;
+            double z = this.random.nextGaussian() * 0.02D;
+            this.level.addParticle(particleType, this.getRandomX(1.0D), this.getRandomY() + 0.5D, this.getRandomZ(1.0D), x, y, z);
+        }
+
     }
 
     @Override
@@ -423,12 +507,18 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
 
     @Override
     public boolean canBeControlledByRider() {
-        return this.getControllingPassenger() instanceof LivingEntity;
+        return this.isOwnedBy(this.getControllingPassenger(), this.level);
     }
 
     @Nullable
-    public Entity getControllingPassenger() {
-        return this.getPassengers().isEmpty()? null : this.getPassengers().get(0);
+    public LivingEntity getControllingPassenger() {
+        if(!this.getPassengers().isEmpty()){
+            Entity firstPassenger = this.getPassengers().get(0);
+            if(firstPassenger instanceof LivingEntity){
+                return (LivingEntity) firstPassenger;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -438,12 +528,12 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
 
     @Override
     protected boolean isImmobile() {
-        return super.isImmobile() && this.isVehicle() && this.gotFood();
+        return super.isImmobile() && this.isVehicle();
     }
 
     @Override
     protected void doPush(Entity pEntity) {
-        if(!this.entityData.get(DATA_IS_VORTEX_ACTIVE)){
+        if(!this.isVortexActive()){
             super.doPush(pEntity);
         }
     }
@@ -457,8 +547,8 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     @Override
     public void travel(Vector3d pTravelVector) {
         if (this.isAlive()) {
-            if (this.isVehicle() && this.canBeControlledByRider() && this.gotFood()) {
-                LivingEntity rider = (LivingEntity)this.getControllingPassenger();
+            if (this.isVehicle() && this.canBeControlledByRider()) {
+                LivingEntity rider = this.getControllingPassenger();
                 this.yRot = rider.yRot;
                 this.yRotO = this.yRot;
                 this.xRot = rider.xRot;
@@ -603,16 +693,21 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
         if(this.isAlliedTo(target)) return false;
         if(!this.canSee(target)) return false;
         if(!EntityPredicates.NO_CREATIVE_OR_SPECTATOR.test(target)) return false;
+        if(this.getPassengers().contains(target)) return false;
 
         if(target instanceof ItemEntity){
-            ItemEntity itemEntity = (ItemEntity) target;
-            return !itemEntity.getItem().isEmpty()
-                    && !itemEntity.hasPickUpDelay()
-                    && this.wantsToPickUp(itemEntity.getItem())
+            ItemEntity targetItem = (ItemEntity) target;
+            return !targetItem.getItem().isEmpty()
+                    && !targetItem.hasPickUpDelay()
+                    && this.wantsToPickUp(targetItem.getItem())
                     && this.getInventory().canAddItem(((ItemEntity)target).getItem());
         } else if(target instanceof LivingEntity){
-            LivingEntity living = (LivingEntity) target;
-            return this.canAttack(living);
+            LivingEntity targetLiving = (LivingEntity) target;
+            LivingEntity owner = this.getOwner(this.level);
+            if(owner != null){
+                if(!this.wantsToAttack(targetLiving, owner, this.level)) return false;
+            }
+            return this.canAttack(targetLiving);
         } else{
             return true;
         }
@@ -739,17 +834,6 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
         return itemstack.getItem().is(AccessModUtil.GOBBLEFIN_FOOD);
     }
 
-    @Override
-    public boolean gotFood() {
-        return this.entityData.get(DATA_GOT_FOOD);
-    }
-
-    @Override
-    public void setGotFood(boolean gotFood) {
-        this.entityData.set(DATA_GOT_FOOD, gotFood);
-        this.level.broadcastEntityEvent(this, (byte) HAPPY_EVENT_ID);
-    }
-
     /**
      * Methods for {@link InventoryHolder}
      */
@@ -760,7 +844,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     }
 
     /**
-     * Methods for {@link OwnableMob}
+     * Methods for {@link TameableMob}
      */
 
     @Override
@@ -772,6 +856,21 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     @Override
     public void setOwnerUUID(@Nullable UUID pUniqueId) {
         this.entityData.set(DATA_ID_OWNER_UUID, Optional.ofNullable(pUniqueId));
+    }
+
+    @Override
+    public void setTame(boolean tame) {
+        this.entityData.set(DATA_TAME, tame);
+    }
+
+    @Override
+    public boolean isTame() {
+        return this.entityData.get(DATA_TAME);
+    }
+
+    @Override
+    public boolean isOwnedBy(LivingEntity pEntity, World level) {
+        return pEntity == this.getOwner(level);
     }
 
     /**
@@ -804,5 +903,10 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
 
     public void stopManualBoosting() {
         this.manualBoosting = false;
+    }
+
+    public boolean isTrappedPassenger(Entity entity) {
+        SimpleTicker ticker = this.trappedPassengers.get(entity.getUUID());
+        return ticker != null && ticker.isActive();
     }
 }

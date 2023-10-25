@@ -26,19 +26,20 @@ public class ServerboundGobblefinControlPacket {
         context.get().enqueueWork(() -> {
             ServerPlayerEntity sender = context.get().getSender();
             if(sender != null && sender.getVehicle() instanceof Gobblefin){
-                Gobblefin vehicle = (Gobblefin) sender.getVehicle();
+                Gobblefin gobblefin = (Gobblefin) sender.getVehicle();
+                if(!gobblefin.isOwnedBy(sender, sender.level)) return;
                 switch (packet.control){
                     case GOBBLEFIN_START_BOOST:
-                        vehicle.startManualBoosting();
+                        gobblefin.startManualBoosting();
                         break;
                     case GOBBLEFIN_STOP_BOOST:
-                        vehicle.stopManualBoosting();
+                        gobblefin.stopManualBoosting();
                         break;
                     case GOBBLEFIN_START_VORTEX:
-                        vehicle.startManualVortex();
+                        gobblefin.startManualVortex();
                         break;
                     case GOBBLEFIN_STOP_VORTEX:
-                        vehicle.stopManualVortex();
+                        gobblefin.stopManualVortex();
                         break;
                     default:
                         throw new IllegalStateException("Invalid enum for ServerboundGobblefinControlPacket: " + packet.control);
