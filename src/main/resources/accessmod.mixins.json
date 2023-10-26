@@ -21,7 +21,6 @@
   "client": [
     "ClientPlayerEntityMixin",
     "ClientPlayNetHandlerMixin",
-    "GameRendererMixin",
     "IngameGuiAccessor",
     "LivingRendererMixin",
     "WorldRendererMixin"
