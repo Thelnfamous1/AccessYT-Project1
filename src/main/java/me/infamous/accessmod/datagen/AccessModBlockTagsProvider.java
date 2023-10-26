@@ -1,6 +1,7 @@
 package me.infamous.accessmod.datagen;
 
 import me.infamous.accessmod.AccessMod;
+import net.minecraft.block.Blocks;
 import net.minecraft.data.BlockTagsProvider;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.tags.BlockTags;
@@ -17,5 +18,6 @@ public class AccessModBlockTagsProvider extends BlockTagsProvider {
     protected void addTags() {
         this.tag(AccessModTags.DUNES_SPAWN_ON).addTag(BlockTags.SAND);
         this.tag(AccessModTags.DUNE_WRATH_SINK_IN).addTag(BlockTags.SAND);
+        this.tag(AccessModTags.VORTEX_IMMUNE).addTag(BlockTags.DRAGON_IMMUNE).add(Blocks.WATER).add(Blocks.LAVA);
     }
 }

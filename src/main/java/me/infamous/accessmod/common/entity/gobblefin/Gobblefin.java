@@ -3,6 +3,7 @@ package me.infamous.accessmod.common.entity.gobblefin;
 import me.infamous.accessmod.common.AccessModUtil;
 import me.infamous.accessmod.common.entity.ai.DynamicSwimmer;
 import me.infamous.accessmod.common.entity.ai.InventoryHolder;
+import me.infamous.accessmod.common.entity.ai.RideableRandomSwimmingGoal;
 import me.infamous.accessmod.common.entity.ai.TameableMob;
 import me.infamous.accessmod.common.entity.ai.eater.Feedable;
 import me.infamous.accessmod.common.entity.ai.eater.VortexEatGoal;
@@ -26,6 +27,7 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
+import net.minecraft.network.play.server.SCameraPacket;
 import net.minecraft.particles.IParticleData;
 import net.minecraft.particles.ParticleTypes;
 import net.minecraft.pathfinding.PathNavigator;
@@ -158,7 +160,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
         //this.goalSelector.addGoal(2, new DolphinEntity.SwimWithPlayerGoal(this, 4.0D));
         this.goalSelector.addGoal(1, new PanicGoal(this, FAST_SWIM_SPEED_MODIFIER));
         this.goalSelector.addGoal(2, new VortexEatGoal<>(this, 20, 8, 100, FAST_SWIM_SPEED_MODIFIER));
-        this.goalSelector.addGoal(4, new RandomSwimmingGoal(this, 1.0D, 10));
+        this.goalSelector.addGoal(4, new RideableRandomSwimmingGoal(this, 1.0D, 10));
         this.goalSelector.addGoal(4, new LookRandomlyGoal(this));
         this.goalSelector.addGoal(5, new LookAtGoal(this, PlayerEntity.class, 6.0F));
         //this.goalSelector.addGoal(5, new DolphinlikeJumpGoal<>(this, 10, 0.6D, 0.7D));
@@ -253,17 +255,51 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     }
 
     @Override
-    protected void addPassenger(Entity pPassenger) {
-        super.addPassenger(pPassenger);
-        if(pPassenger instanceof LivingEntity && !this.isOwnedBy((LivingEntity) pPassenger, this.level)){
-            this.trappedPassengers.put(pPassenger.getUUID(), new SimpleTicker(1200));
+    protected void addPassenger(Entity mountedBy) {
+        super.addPassenger(mountedBy);
+        if(mountedBy instanceof LivingEntity){
+            if(!this.isOwnedBy((LivingEntity) mountedBy, this.level)){
+                this.trappedPassengers.put(mountedBy.getUUID(), new SimpleTicker(1200));
+                if(this.canBeControlledByRider() && mountedBy instanceof ServerPlayerEntity){
+                    LivingEntity controllingPassenger = this.getControllingPassenger();
+                    if(controllingPassenger != null){
+                        this.changePassengerCamera((ServerPlayerEntity) mountedBy, controllingPassenger);
+                    }
+                }
+            } else if(this.canBeControlledByRider()){
+                LivingEntity controllingPassenger = this.getControllingPassenger();
+                if(controllingPassenger != null){
+                    for(Entity passenger : this.getPassengers()){
+                        if(passenger != controllingPassenger && passenger instanceof ServerPlayerEntity){
+                            this.changePassengerCamera((ServerPlayerEntity) passenger, controllingPassenger);
+                        }
+                    }
+                }
+            }
         }
     }
 
+    private void changePassengerCamera(ServerPlayerEntity passenger, Entity camera) {
+        passenger.connection.send(new SCameraPacket(camera));
+    }
+
     @Override
-    protected void removePassenger(Entity pPassenger) {
-        super.removePassenger(pPassenger);
-        this.trappedPassengers.remove(pPassenger.getUUID());
+    protected void removePassenger(Entity dismountedBy) {
+        super.removePassenger(dismountedBy);
+        this.trappedPassengers.remove(dismountedBy.getUUID());
+        if(dismountedBy instanceof LivingEntity && this.isOwnedBy((LivingEntity) dismountedBy, this.level)){
+            for(Entity passenger : this.getPassengers()){
+                if(passenger instanceof ServerPlayerEntity){
+                    this.resetPassengerCamera(((ServerPlayerEntity) passenger));
+                }
+            }
+        } else if(dismountedBy instanceof ServerPlayerEntity){
+            this.resetPassengerCamera(((ServerPlayerEntity) dismountedBy));
+        }
+    }
+
+    private void resetPassengerCamera(ServerPlayerEntity passenger) {
+        passenger.connection.send(new SCameraPacket(passenger));
     }
 
     // various method overrides associated with TameableEntity
@@ -382,7 +418,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     @Override
     public void customServerAiStep() {
         if (!this.manualBoosting){
-            if(this.getMoveControl().hasWanted()) {
+            if(!this.canBeControlledByRider() && this.getMoveControl().hasWanted()) {
                 double speedModifier = this.getMoveControl().getSpeedModifier();
                 this.setSwimmingFast(speedModifier > 1.0F);
             } else{
@@ -512,7 +548,9 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
 
     @Override
     public boolean canBeControlledByRider() {
-        return this.isOwnedBy(this.getControllingPassenger(), this.level);
+        LivingEntity controllingPassenger = this.getControllingPassenger();
+        if(controllingPassenger == null) return false;
+        return this.isOwnedBy(controllingPassenger, this.level);
     }
 
     @Nullable
@@ -610,7 +648,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
             this.moveRelative(this.getSpeed(), pTravelVector);
             this.move(MoverType.SELF, this.getDeltaMovement());
             this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
-            if (playerControlled || this.getTarget() == null) {
+            if (this.getTarget() == null) {
                 this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -DolphinlikeMoveHelperController.SINK_Y_OFFSET, 0.0D));
             }
         } else {
@@ -911,6 +949,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
     }
 
     public boolean isTrappedPassenger(Entity entity) {
+        if(!this.canBeControlledByRider()) return false;
         SimpleTicker ticker = this.trappedPassengers.get(entity.getUUID());
         return ticker != null && ticker.isActive();
     }

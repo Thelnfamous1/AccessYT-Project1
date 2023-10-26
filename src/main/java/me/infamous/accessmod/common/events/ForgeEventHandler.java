@@ -192,7 +192,7 @@ public class ForgeEventHandler {
             Gobblefin gobblefin = (Gobblefin) event.getEntityBeingMounted();
             if(event.isDismounting()){
                 Entity rider = event.getEntityMounting();
-                if(gobblefin.isTrappedPassenger(rider) && EntityPredicates.NO_CREATIVE_OR_SPECTATOR.test(rider)){
+                if(gobblefin.isAlive() && gobblefin.isTrappedPassenger(rider) && EntityPredicates.NO_CREATIVE_OR_SPECTATOR.test(rider)){
                     event.setCanceled(true);
                 } else if(!event.getWorldObj().isClientSide && !gobblefin.isThrowingUp()){
                     gobblefin.setThrowingUp();

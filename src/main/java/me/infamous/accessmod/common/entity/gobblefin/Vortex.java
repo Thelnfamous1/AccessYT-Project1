@@ -5,10 +5,10 @@ import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import me.infamous.accessmod.AccessMod;
+import me.infamous.accessmod.datagen.AccessModTags;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.FlowingFluidBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.item.ItemEntity;
@@ -149,7 +149,9 @@ public class Vortex {
 
                   for(float shiftScale = 0.3F; power > 0.0F; power -= 0.22500001F) {
                      BlockPos targetPos = new BlockPos(targetX, targetY, targetZ);
-                     blocksToBlow.add(targetPos);
+                     if(!this.level.getBlockState(targetPos).is(AccessModTags.VORTEX_IMMUNE)){
+                        blocksToBlow.add(targetPos);
+                     }
 
                      targetX += xDist * (double)shiftScale;
                      targetY += yDist * (double)shiftScale;
@@ -184,9 +186,7 @@ public class Vortex {
 
          for(BlockPos blockToBlow : this.blocksToBlow) {
             BlockState stateToBlow = this.level.getBlockState(blockToBlow);
-            Block block = stateToBlow.getBlock();
-            boolean isFluidBlock = block instanceof FlowingFluidBlock;
-            if (!stateToBlow.isAir(this.level, blockToBlow) && !isFluidBlock) {
+            if (!stateToBlow.isAir(this.level, blockToBlow) && !stateToBlow.is(AccessModTags.VORTEX_IMMUNE)) {
                BlockPos blockToBlowImm = blockToBlow.immutable();
                if (this.level instanceof ServerWorld) {
                   TileEntity tileToBlow = stateToBlow.hasTileEntity() ? this.level.getBlockEntity(blockToBlow) : null;
