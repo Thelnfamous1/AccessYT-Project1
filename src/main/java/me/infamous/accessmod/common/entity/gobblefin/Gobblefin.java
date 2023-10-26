@@ -648,7 +648,7 @@ public class Gobblefin extends WaterMobEntity implements IAnimatable, VortexEate
             this.moveRelative(this.getSpeed(), pTravelVector);
             this.move(MoverType.SELF, this.getDeltaMovement());
             this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
-            if (this.getTarget() == null) {
+            if (!playerControlled && this.getTarget() == null) {
                 this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -DolphinlikeMoveHelperController.SINK_Y_OFFSET, 0.0D));
             }
         } else {

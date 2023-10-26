@@ -32,7 +32,7 @@ public class ForgeClientEventHandler {
     @SubscribeEvent
     static void onFOVModifier(FOVUpdateEvent event){
         if(event.getEntity().getVehicle() instanceof Gobblefin){
-            event.setNewfov(event.getNewfov() * 8.0F);
+            event.setNewfov(event.getNewfov() * 2.0F);
         }
     }
 
