@@ -102,8 +102,10 @@ public class ForgeEventHandler {
     @SubscribeEvent
     static void onClientPlayerTick(TickEvent.PlayerTickEvent event){
         if(event.phase == TickEvent.Phase.END && event.side == LogicalSide.CLIENT && DuneSinker.canSink(event.player)){
-            ClientPlayerEntity player = (ClientPlayerEntity) event.player;
-            AccessModNetwork.SYNC_CHANNEL.sendToServer(new ServerboundDuneJumpPacket(player.input.jumping));
+            if(event.player.isLocalPlayer()){
+                ClientPlayerEntity player = (ClientPlayerEntity) event.player;
+                AccessModNetwork.SYNC_CHANNEL.sendToServer(new ServerboundDuneJumpPacket(player.input.jumping));
+            }
         }
     }
 
